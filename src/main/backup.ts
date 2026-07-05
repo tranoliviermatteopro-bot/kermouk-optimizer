@@ -244,7 +244,9 @@ export async function restoreBackup(id: string): Promise<{ success: boolean; err
     .filter(Boolean)
     .join("\n");
 
-  const ps1 = [
+  const stamp = Date.now();
+  const outPath = join(os.tmpdir(), `kermouk_restore_out_${stamp}.txt`);
+  const innerPs1 = [
     "$ErrorActionPreference = 'SilentlyContinue'",
     "# Restore registry",
     regImportLines,
@@ -252,21 +254,36 @@ export async function restoreBackup(id: string): Promise<{ success: boolean; err
     regDeleteLines,
     "# Restore services",
     svcLines,
+    "Write-Host 'RESTORE_DONE'",
   ].join("\n");
+  // Le stdout de l'enfant élevé (Start-Process -Verb RunAs) n'est pas relayé : le script
+  // capture donc lui-même toutes ses sorties (Write-Host "FAIL reg …" inclus, via *>&1)
+  // vers un fichier temp que le parent relit pour vérifier l'aboutissement réel.
+  const ps1 = `& {\n${innerPs1}\n} *>&1 | Out-File -LiteralPath '${outPath.replace(/'/g, "''")}' -Encoding utf8 -Width 4096`;
 
-  const ps1Path = join(os.tmpdir(), `kermouk_restore_${Date.now()}.ps1`);
+  const ps1Path = join(os.tmpdir(), `kermouk_restore_${stamp}.ps1`);
   fs.writeFileSync(ps1Path, ps1, "utf-8");
 
   try {
     const escaped = ps1Path.replace(/\\/g, "\\\\");
     const cmd = `powershell -Command "Start-Process powershell.exe -ArgumentList '-ExecutionPolicy Bypass -File \\"${escaped}\\"' -Verb RunAs -Wait"`;
     await execAsync(cmd, { timeout: 120000 });
-    return { success: true, errors };
+    let out = "";
+    try { out = fs.readFileSync(outPath, "utf-8").trim(); } catch { /* fichier absent = script non abouti */ }
+    if (!out.includes("RESTORE_DONE")) {
+      errors.push(out || "Restauration non terminée — élévation refusée ou script interrompu.");
+      return { success: false, errors };
+    }
+    for (const line of out.split(/\r?\n/)) {
+      if (line.includes("FAIL")) errors.push(line.trim());
+    }
+    return { success: errors.length === 0, errors };
   } catch (e) {
     errors.push(String(e));
     return { success: false, errors };
   } finally {
     if (fs.existsSync(ps1Path)) fs.unlinkSync(ps1Path);
+    if (fs.existsSync(outPath)) fs.unlinkSync(outPath);
   }
 }
 
