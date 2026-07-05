@@ -207,11 +207,17 @@ ipcMain.handle("license-clear", () => {
 
 ipcMain.handle("license-activate", async (_e, key: string) => {
   try {
-    const trimmed = key.trim().toUpperCase();
+    const raw = key.trim();
+    const kermCandidate = raw.toUpperCase();
+    const isKerm = /^KERM-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(kermCandidate);
+    // Compat ascendante : d'anciens achats ont pu être enregistrés au format UUID (lowercase)
+    const isLegacyUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw);
 
-    if (!/^KERM-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(trimmed)) {
+    if (!isKerm && !isLegacyUuid) {
       return { ok: false, message: "Format invalide. Attendu : KERM-XXXX-XXXX-XXXX" };
     }
+
+    const trimmed = isKerm ? kermCandidate : raw.toLowerCase();
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) {

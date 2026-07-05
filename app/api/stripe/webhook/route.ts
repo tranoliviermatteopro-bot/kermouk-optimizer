@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { randomUUID } from "crypto";
+import { generateLicenseKey } from "../../../../src/main/licenses";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-06-24.dahlia" });
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     const session = event.data.object as Stripe.Checkout.Session;
     const plan = session.metadata?.plan || "monthly";
     const email = session.customer_email || session.customer_details?.email || "";
-    const licenseKey = randomUUID();
+    const licenseKey = generateLicenseKey();
 
     const { error: insertError } = await supabase.from("licenses").insert({
       key: licenseKey,

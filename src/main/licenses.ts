@@ -15,7 +15,7 @@ function randomSegment(): string {
   return Array.from(bytes).map((b) => CHARS[b & 0x1f]).join("");
 }
 
-function generateKey(): string {
+export function generateLicenseKey(): string {
   return `KERM-${randomSegment()}-${randomSegment()}-${randomSegment()}`;
 }
 
@@ -61,7 +61,7 @@ export async function generateLicenseKeys(
     if (++attempts > maxAttempts) {
       throw new Error(`Impossible de générer ${n} clés uniques après ${maxAttempts} essais`);
     }
-    const key = generateKey();
+    const key = generateLicenseKey();
     if (!existingSet.has(key)) {
       existingSet.add(key);
       keys.push(key);
