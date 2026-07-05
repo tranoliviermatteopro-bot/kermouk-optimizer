@@ -67,16 +67,8 @@ export const FREE_TWEAKS: Tweak[] = [
     description: "Active la résolution de timer haute précision pour réduire la latence gaming et les micro-stutters.",
     category: "free",
     commands: [
-      "bcdedit /set useplatformtick yes",
       "bcdedit /set disabledynamictick yes",
     ],
-  },
-  {
-    id: "disable-hyperv",
-    name: "Désactivation Hyper-V",
-    description: "Désactive Hyper-V pour éliminer la couche de virtualisation et réduire la latence CPU.",
-    category: "free",
-    commands: ["bcdedit /set hypervisorlaunchtype off"],
   },
   {
     id: "ssd-nvme-optimization",
@@ -375,7 +367,6 @@ export const PREMIUM_TWEAKS: Tweak[] = [
     commands: [
       "bcdedit /set disabledynamictick yes",
       "bcdedit /set useplatformclock false",
-      "bcdedit /set tscsyncpolicy enhanced",
     ],
   },
   {

@@ -601,7 +601,6 @@ reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl" /v "Win32Pri
 
 :: 4. Desactiver HPET
 bcdedit /deletevalue useplatformclock >nul 2>&1
-bcdedit /set useplatformtick yes >nul 2>&1
 bcdedit /set disabledynamictick yes >nul 2>&1
 
 :: 5. Desactiver CPU throttling
