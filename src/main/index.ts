@@ -577,10 +577,9 @@ ipcMain.handle("get-hardware-monitor", async () => {
 ipcMain.handle("apply-cpu-performance-tweaks", async () => {
   const batContent = `@echo off
 :: 1. Activer Ultimate Performance power plan
-powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 >nul 2>&1
-for /f "tokens=4 delims= " %%a in ('powercfg /list ^| findstr /i "Ultimate"') do (
-  powercfg /setactive %%a
-)
+:: Duplique vers un GUID fixe (KERMOUK) : locale-safe, pas de doublons a chaque run
+powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 c4d5e6f7-1234-4567-89ab-cdef01234567 >nul 2>&1
+powercfg /setactive c4d5e6f7-1234-4567-89ab-cdef01234567
 if errorlevel 1 powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
 :: 2. Desactiver Core Parking
@@ -1349,13 +1348,9 @@ schtasks /Change /TN "\\Microsoft\\Windows\\WindowsErrorReporting\\QueueReportin
 schtasks /Change /TN "\\Microsoft\\Windows\\XblGameSave\\XblGameSaveTask" /Disable >nul 2>&1
 
 echo [10/10] Plan alimentation et disque SSD...
-powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 >nul 2>&1
-for /f "tokens=4 delims= " %%G in ('powercfg /list ^| findstr /i "Ultimate"') do set "UGUID=%%G"
-if defined UGUID (
-  powercfg /setactive !UGUID! >nul 2>&1
-) else (
-  powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
-)
+powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 c4d5e6f7-1234-4567-89ab-cdef01234567 >nul 2>&1
+powercfg /setactive c4d5e6f7-1234-4567-89ab-cdef01234567 >nul 2>&1
+if errorlevel 1 powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
 powercfg /change standby-timeout-ac 0 >nul 2>&1
 fsutil behavior set disableDeleteNotify 0 >nul 2>&1
 reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters" /v EnablePrefetcher /t REG_DWORD /d 0 /f >nul
