@@ -154,9 +154,8 @@ export const PREMIUM_TWEAKS: Tweak[] = [
     description: "Désactive l'algorithme Nagle (TcpAckFrequency + TCPNoDelay) pour envoyer les paquets immédiatement sans délai.",
     category: "premium",
     commands: [],
-    registryCommands: [
-      'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces" /v TcpAckFrequency /t REG_DWORD /d 1 /f',
-      'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces" /v TCPNoDelay /t REG_DWORD /d 1 /f',
+    powershellCommands: [
+      "Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name TcpAckFrequency -Value 1 -Type DWord -ErrorAction SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name TCPNoDelay -Value 1 -Type DWord -ErrorAction SilentlyContinue }",
     ],
   },
   {

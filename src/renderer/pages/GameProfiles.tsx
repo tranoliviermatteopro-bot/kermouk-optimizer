@@ -36,8 +36,7 @@ echo OK`,
     description: "Tweaks COD/Activision, priorité processus, désactivation overlay Battlenet",
     paths: ["C:\\Program Files (x86)\\Activision", "C:\\Program Files\\Battle.net"],
     tweaks: `@echo off
-reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters" /v "TcpAckFrequency" /t REG_DWORD /d 1 /f >nul
-reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters" /v "TCPNoDelay" /t REG_DWORD /d 1 /f >nul
+powershell -NoProfile -Command "Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name TcpAckFrequency -Value 1 -Type DWord -ErrorAction SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name TCPNoDelay -Value 1 -Type DWord -ErrorAction SilentlyContinue }" >nul
 reg add "HKCU\\Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\Shell\\MuiCache" /v "COD_Boost" /t REG_SZ /d "1" /f >nul
 echo OK`,
   },
@@ -48,8 +47,7 @@ echo OK`,
     description: "Tweaks Origin/EA App, optimisation mémoire Apex, config réseau",
     paths: ["C:\\Program Files (x86)\\Origin Games\\Apex", "C:\\Program Files\\EA Games\\Apex Legends"],
     tweaks: `@echo off
-reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters" /v "TcpAckFrequency" /t REG_DWORD /d 1 /f >nul
-reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters" /v "TCPNoDelay" /t REG_DWORD /d 1 /f >nul
+powershell -NoProfile -Command "Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name TcpAckFrequency -Value 1 -Type DWord -ErrorAction SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name TCPNoDelay -Value 1 -Type DWord -ErrorAction SilentlyContinue }" >nul
 echo OK`,
     launchOptions: "+fps_max 0 -novid -high -preload",
   },
@@ -70,8 +68,7 @@ echo OK`,
     description: "Launch options optimales, tweaks réseau Valve, priorité CPU",
     paths: ["C:\\Program Files (x86)\\Steam\\steamapps\\common\\Counter-Strike Global Offensive"],
     tweaks: `@echo off
-reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters" /v "TcpAckFrequency" /t REG_DWORD /d 1 /f >nul
-reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters" /v "TCPNoDelay" /t REG_DWORD /d 1 /f >nul
+powershell -NoProfile -Command "Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name TcpAckFrequency -Value 1 -Type DWord -ErrorAction SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name TCPNoDelay -Value 1 -Type DWord -ErrorAction SilentlyContinue }" >nul
 echo OK`,
     launchOptions: "-novid -high -nojoy +fps_max 0 -tickrate 128",
   },
