@@ -5,7 +5,6 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import * as fs from "fs";
 import * as os from "os";
-import * as crypto from "crypto";
 import Store from "electron-store";
 import { createClient } from "@supabase/supabase-js";
 import si from "systeminformation";
@@ -126,15 +125,6 @@ function loadLicense(): string | null {
   return key.length > 0 ? key : null;
 }
 
-const MASTER_HASH = "d8bacdc17a9074e9f1082a03a4521468dfab211507b942e71c1c3387ac591713";
-
-function validateLicenseKey(key: string): boolean {
-  const hash = crypto.createHash("sha256").update(key).digest("hex");
-  if (hash === MASTER_HASH) return true;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(key);
-}
-
 function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
@@ -209,14 +199,6 @@ ipcMain.on("window-close", () => BrowserWindow.getFocusedWindow()?.close());
 
 // ─── IPC: License ───────────────────────────────────────────────────────────
 ipcMain.handle("license-load", () => loadLicense());
-
-ipcMain.handle("license-save", (_e, key: string) => {
-  if (!validateLicenseKey(key)) {
-    return { ok: false, message: "Clé invalide. Utilisez votre UUID reçu après paiement." };
-  }
-  saveLicense(key);
-  return { ok: true };
-});
 
 ipcMain.handle("license-clear", () => {
   if (fs.existsSync(LICENSE_FILE)) fs.unlinkSync(LICENSE_FILE);

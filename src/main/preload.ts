@@ -8,7 +8,6 @@ contextBridge.exposeInMainWorld("kermouk", {
 
   // License
   loadLicense: () => ipcRenderer.invoke("license-load"),
-  saveLicense: (key: string) => ipcRenderer.invoke("license-save", key),
   clearLicense: () => ipcRenderer.invoke("license-clear"),
   activateLicense: (key: string) => ipcRenderer.invoke("license-activate", key),
 

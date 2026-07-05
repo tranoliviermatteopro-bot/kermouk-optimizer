@@ -59,7 +59,6 @@ declare global {
       maximize: () => void;
       close: () => void;
       loadLicense: () => Promise<string | null>;
-      saveLicense: (key: string) => Promise<{ ok: boolean; message?: string }>;
       clearLicense: () => Promise<{ ok: boolean }>;
       activateLicense: (key: string) => Promise<{ ok: boolean; message?: string; profile?: SupabaseProfile; alreadyOwned?: boolean }>;
       getSystemInfo: () => Promise<Record<string, string>>;
