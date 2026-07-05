@@ -1172,10 +1172,10 @@ function startMonitoring(win: BrowserWindow) {
 
       const data = { cpuUsage, ramUsage, ramTotalGb, ramUsedGb, cpuTemp: lastTemp, gpuUsage: -1, gpuTemp: -1, fortniteRunning };
 
-      if (ram > 90) {
+      if (ramUsage > 90) {
         new Notification({
           title: "KERMOUK - RAM saturee",
-          body: `RAM a ${ram}% - Lance le Nettoyeur pour liberer de la memoire !`,
+          body: `RAM a ${ramUsage}% - Lance le Nettoyeur pour liberer de la memoire !`,
           icon: join(__dirname, "../../resources/icon.png"),
         }).show();
       } else if (lastTemp > 85 && lastTemp < 120) {
