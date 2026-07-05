@@ -37,7 +37,6 @@ const RAM_TWEAKS = [
   PREMIUM_TWEAKS.find(t => t.id === "svhost-split-32gb")!,
   PREMIUM_TWEAKS.find(t => t.id === "disable-memory-compression")!,
   PREMIUM_TWEAKS.find(t => t.id === "clear-pagefile-shutdown")!,
-  PREMIUM_TWEAKS.find(t => t.id === "disable-prefetcher")!,
   PREMIUM_TWEAKS.find(t => t.id === "disable-ram-diagnostics")!,
   PREMIUM_TWEAKS.find(t => t.id === "restore-sysmain")!,
   PREMIUM_TWEAKS.find(t => t.id === "disable-page-combining")!,

@@ -1359,8 +1359,6 @@ powercfg /setactive c4d5e6f7-1234-4567-89ab-cdef01234567 >nul 2>&1
 if errorlevel 1 powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
 powercfg /change standby-timeout-ac 0 >nul 2>&1
 fsutil behavior set disableDeleteNotify 0 >nul 2>&1
-reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters" /v EnablePrefetcher /t REG_DWORD /d 0 /f >nul
-reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters" /v EnableSuperfetch /t REG_DWORD /d 0 /f >nul
 
 echo PACK_COMPLET_OK
 endlocal

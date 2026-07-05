@@ -267,14 +267,6 @@ export const PREMIUM_TWEAKS: Tweak[] = [
   },
   // ── SERVICES ─────────────────────────────────────────────────────────────────
   {
-    id: "disable-superfetch",
-    name: "Desactivation SysMain (deconseille 32GB)",
-    description: "ATTENTION : sur 32 GB RAM, SysMain est benefique. A desactiver uniquement si RAM < 8 GB.",
-    category: "premium",
-    serviceCommands: ["sc stop SysMain", "sc config SysMain start=disabled"],
-    commands: [],
-  },
-  {
     id: "disable-tracking",
     name: "Désactivation DiagTrack & Telemetry",
     description: "Désactive la télémétrie Windows qui consomme bande passante et CPU.",
@@ -670,16 +662,6 @@ export const PREMIUM_TWEAKS: Tweak[] = [
     category: "premium",
     registryCommands: [
       'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management" /v "ClearPageFileAtShutdown" /t REG_DWORD /d 1 /f',
-    ],
-    commands: [],
-  },
-  {
-    id: "disable-prefetcher",
-    name: "Désactiver Prefetcher Disque",
-    description: "Désactive le mécanisme de prélecture automatique Windows (EnablePrefetcher=0) — sur SSD/NVMe, le prefetcher est redondant car les temps d'accès sont déjà quasi-nuls.",
-    category: "premium",
-    registryCommands: [
-      'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters" /v "EnablePrefetcher" /t REG_DWORD /d 0 /f',
     ],
     commands: [],
   },

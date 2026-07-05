@@ -13,7 +13,6 @@ const SYSTEM_TWEAKS = [
   PREMIUM_TWEAKS.find((t) => t.id === "usb-power-save-disable")!,
   PREMIUM_TWEAKS.find((t) => t.id === "energy-estimation-disable")!,
   PREMIUM_TWEAKS.find((t) => t.id === "svhost-split-32gb")!,
-  PREMIUM_TWEAKS.find((t) => t.id === "disable-superfetch")!,
   PREMIUM_TWEAKS.find((t) => t.id === "disable-tracking")!,
   PREMIUM_TWEAKS.find((t) => t.id === "disable-xbox-services")!,
   PREMIUM_TWEAKS.find((t) => t.id === "disable-other-services")!,

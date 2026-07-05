@@ -19,7 +19,6 @@ const TABS: { id: Tab; label: string }[] = [
 
 // ── Services: désactivation des services Windows inutiles ─────────────────────
 const SERVICES_TWEAKS = [
-  PREMIUM_TWEAKS.find(t => t.id === "disable-superfetch")!,
   PREMIUM_TWEAKS.find(t => t.id === "disable-tracking")!,
   PREMIUM_TWEAKS.find(t => t.id === "disable-xbox-services")!,
   PREMIUM_TWEAKS.find(t => t.id === "disable-other-services")!,
