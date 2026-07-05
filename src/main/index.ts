@@ -402,8 +402,16 @@ ipcMain.handle("create-restore-point", async () => {
 ipcMain.handle("apply-tweaks", async (_e, batContent: string, tweakNames: string[]) => {
   // Auto-backup: first tweak of the session if no automatic backup exists today
   if (!autoBackupTriggeredThisSession && !hasAutoBackupToday()) {
-    autoBackupTriggeredThisSession = true;
-    createBackup("Sauvegarde auto", "automatic").catch(() => {});
+    try {
+      await createBackup("Sauvegarde auto", "automatic");
+      autoBackupTriggeredThisSession = true;
+    } catch (e: unknown) {
+      return {
+        ok: false,
+        error: String(e),
+        message: "Sauvegarde de sécurité impossible — application annulée pour préserver la restauration. Réessayez ou créez une sauvegarde manuelle.",
+      };
+    }
   }
 
   try {
