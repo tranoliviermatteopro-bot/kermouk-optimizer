@@ -1278,8 +1278,8 @@ fsutil behavior set memoryusage 1 >nul 2>&1
 fsutil behavior set disable8dot3 1 >nul 2>&1
 fsutil behavior set disablelastaccess 1 >nul 2>&1
 fsutil behavior set mftzone 2 >nul 2>&1
-wmic computersystem where name="%computername%" set AutomaticManagedPagefile=False >nul 2>&1
-wmic pagefileset where name="C:\\pagefile.sys" set InitialSize=4096,MaximumSize=4096 >nul 2>&1
+powershell -NoProfile -Command "try { Set-CimInstance -InputObject (Get-CimInstance Win32_ComputerSystem -ErrorAction Stop) -Property @{AutomaticManagedPagefile=$true} -ErrorAction Stop; exit 0 } catch { exit 1 }" >nul 2>&1
+if errorlevel 1 echo    [!] Pagefile: configuration auto non appliquee (droits admin ?)
 del /f /q "%SystemRoot%\\Prefetch\\*.pf" >nul 2>&1
 
 echo [3/10] Priorite CPU Fortnite...
@@ -1451,7 +1451,7 @@ sc config "XblGameSave" start= auto >nul 2>&1
 
 powershell -NoProfile -Command "Enable-MMAgent -MemoryCompression" >nul 2>&1
 fsutil behavior set memoryusage 1 >nul 2>&1
-wmic computersystem where name="%computername%" set AutomaticManagedPagefile=True >nul 2>&1
+powershell -NoProfile -Command "Set-CimInstance -InputObject (Get-CimInstance Win32_ComputerSystem) -Property @{AutomaticManagedPagefile=$true}" >nul 2>&1
 
 reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 2 /f >nul
 reg delete "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\FortniteClient-Win64-Shipping.exe\\PerfOptions" /f >nul 2>&1
