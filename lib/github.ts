@@ -1,3 +1,5 @@
+import pkg from "../package.json";
+
 export interface GithubRelease {
   version: string;
   tag: string;
@@ -5,13 +7,14 @@ export interface GithubRelease {
   publishedAt: string;
 }
 
-const REPO = "tranoliviermatteopro-bot/kermouk-optimizer";
+const OWNER = "agencyweb-pro";
+const REPO = `${OWNER}/kermouk-optimizer`;
 
 const FALLBACK: GithubRelease = {
-  version: "2.7.1",
-  tag: "v2.7.1",
+  version: pkg.version,
+  tag: `v${pkg.version}`,
   downloadUrl:
-    "https://github.com/tranoliviermatteopro-bot/kermouk-optimizer/releases/download/v2.7.1/KERMOUK.OPTIMIZER.Setup.2.7.1.exe",
+    `https://github.com/${REPO}/releases/download/v${pkg.version}/KERMOUK.OPTIMIZER.Setup.${pkg.version}.exe`,
   publishedAt: new Date().toISOString(),
 };
 

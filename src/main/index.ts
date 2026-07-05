@@ -1062,7 +1062,7 @@ function initAutoUpdater(win: BrowserWindow) {
   try {
     autoUpdater.setFeedURL({
       provider: 'github',
-      owner: 'tranoliviermatteopro-bot',
+      owner: 'agencyweb-pro',
       repo: 'kermouk-optimizer'
     });
     autoUpdater.logger = null; // désactive les logs internes qui peuvent crasher
@@ -1102,8 +1102,10 @@ function initAutoUpdater(win: BrowserWindow) {
 
   autoUpdater.on("update-downloaded", (info) => send("downloaded", { version: info.version }));
 
-  // Erreur silencieuse — ne doit jamais crasher l'app
-  autoUpdater.on("error", () => { /* silencieux */ });
+  // Remonte l'erreur au renderer (carte d'état MàJ, type "error" déjà géré) sans crasher l'app
+  autoUpdater.on("error", (err) => {
+    send("error", { message: err?.message ?? String(err) });
+  });
 
   // Vérification 10s après le lancement — toujours dans un try/catch
   setTimeout(() => {
