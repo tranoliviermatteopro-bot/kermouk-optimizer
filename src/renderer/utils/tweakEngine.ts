@@ -81,14 +81,6 @@ export const FREE_TWEAKS: Tweak[] = [
     ],
   },
   {
-    id: "disable-defender-rt",
-    name: "Désactivation Defender Temps Réel",
-    description: "Désactive la protection temps réel Windows Defender pendant les sessions gaming pour libérer CPU.",
-    category: "free",
-    commands: [],
-    powershellCommands: ["Set-MpPreference -DisableRealtimeMonitoring $true"],
-  },
-  {
     id: "mmcss-audio",
     name: "MMCSS Audio Tweaks",
     description: "Optimise le sous-système MMCSS (SystemResponsiveness=0, NetworkThrottlingIndex max) pour prioriser les jeux.",

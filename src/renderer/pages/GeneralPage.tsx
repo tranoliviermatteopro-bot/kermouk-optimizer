@@ -50,7 +50,6 @@ const PRIVACY_TWEAKS_ALL = [
 // ── QOL: qualité de vie (commun Win10 + Win11) ───────────────────────────────
 const QOL_TWEAKS_BASE = [
   FREE_TWEAKS.find(t => t.id === "clean-temp")!,
-  FREE_TWEAKS.find(t => t.id === "disable-defender-rt")!,
   PREMIUM_TWEAKS.find(t => t.id === "energy-estimation-disable")!,
   PREMIUM_TWEAKS.find(t => t.id === "qol-control-panel-shortcut")!,
   PREMIUM_TWEAKS.find(t => t.id === "qol-classic-altf4")!,
