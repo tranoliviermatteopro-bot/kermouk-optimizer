@@ -1232,6 +1232,18 @@ export const PREMIUM_TWEAKS: Tweak[] = [
   },
 ];
 
+// Les commandes PowerShell sont encodées en Base64 (UTF-16LE) et passées via
+// -EncodedCommand : les guillemets internes n'entrent jamais en conflit avec le
+// parsing cmd.exe / powershell -Command.
+function encodePowerShellCommand(cmd: string): string {
+  let binary = "";
+  for (let i = 0; i < cmd.length; i++) {
+    const code = cmd.charCodeAt(i);
+    binary += String.fromCharCode(code & 0xff, (code >> 8) & 0xff);
+  }
+  return btoa(binary);
+}
+
 export function generateBatScript(tweaks: Tweak[]): string {
   const lines: string[] = [
     "@echo off",
@@ -1265,7 +1277,7 @@ export function generateBatScript(tweaks: Tweak[]): string {
 
     if (tweak.powershellCommands?.length) {
       for (const cmd of tweak.powershellCommands) {
-        lines.push(`powershell -Command "${cmd}"`);
+        lines.push(`powershell -NoProfile -EncodedCommand ${encodePowerShellCommand(cmd)}`);
       }
     }
 
