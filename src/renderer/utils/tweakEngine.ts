@@ -179,10 +179,10 @@ export const PREMIUM_TWEAKS: Tweak[] = [
   {
     id: "interrupt-affinity",
     name: "Interrupt Affinity Réseau",
-    description: "Désactive l'Interrupt Moderation sur l'adaptateur Ethernet pour réduire la latence réseau.",
+    description: "Désactive l'Interrupt Moderation sur le(s) adaptateur(s) réseau actif(s) pour réduire la latence réseau.",
     category: "premium",
     commands: [],
-    powershellCommands: ['Set-NetAdapterAdvancedProperty -Name "Ethernet" -RegistryKeyword "*InterruptModeration" -RegistryValue 0'],
+    powershellCommands: ['Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | ForEach-Object { Set-NetAdapterAdvancedProperty -Name $_.Name -RegistryKeyword "*InterruptModeration" -RegistryValue 0 -ErrorAction SilentlyContinue }'],
   },
   // ── GPU ─────────────────────────────────────────────────────────────────────
   {
@@ -1208,7 +1208,7 @@ export const PREMIUM_TWEAKS: Tweak[] = [
     description: "Configure le GPU pour que ses interruptions matérielles soient traitées en priorité absolue (MessageSignaledInterruptProperties) — réduit la latence de rendu d'1 à 3ms sur cartes NVIDIA.",
     category: "premium",
     powershellCommands: [
-      '$gpu = Get-PnpDevice | Where-Object { $_.Class -eq "Display" -and $_.Status -eq "OK" } | Select-Object -First 1; if ($gpu) { $path = "HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\" + $gpu.InstanceId + "\\Device Parameters\\Interrupt Management\\MessageSignaledInterruptProperties"; if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }; Set-ItemProperty -Path $path -Name "MSISupported" -Value 1 -Type DWord -ErrorAction SilentlyContinue }',
+      '$gpu = Get-PnpDevice -Class Display -Status OK -ErrorAction SilentlyContinue | Where-Object { $_.FriendlyName -match "NVIDIA" } | Select-Object -First 1; if (-not $gpu) { $gpu = Get-PnpDevice -Class Display -Status OK -ErrorAction SilentlyContinue | Where-Object { $_.FriendlyName -notmatch "Intel|Microsoft" } | Select-Object -First 1 }; if ($gpu) { $path = "HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\" + $gpu.InstanceId + "\\Device Parameters\\Interrupt Management\\MessageSignaledInterruptProperties"; if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }; Set-ItemProperty -Path $path -Name "MSISupported" -Value 1 -Type DWord -ErrorAction SilentlyContinue }',
     ],
     commands: [],
   },

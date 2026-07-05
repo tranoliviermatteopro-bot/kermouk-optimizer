@@ -367,9 +367,13 @@ ipcMain.handle("get-system-info", async () => {
       si.graphics(),
       si.osInfo(),
     ]);
-    const gpu = graphics.controllers.find(
-      (c) => !c.vendor?.toLowerCase().includes("microsoft")
+    const controllers = graphics.controllers.filter(
+      (c) => !`${c.vendor ?? ""} ${c.model ?? ""}`.toLowerCase().includes("microsoft")
     );
+    const gpu =
+      controllers.find((c) => `${c.vendor ?? ""} ${c.model ?? ""}`.toLowerCase().includes("nvidia")) ??
+      controllers.find((c) => !`${c.vendor ?? ""} ${c.model ?? ""}`.toLowerCase().includes("intel")) ??
+      controllers[0];
     cachedSysInfo = {
       cpu: `${cpu.brand} (${cpu.cores} cœurs)`,
       ram: `${Math.round(mem.total / 1073741824)} GB`,
@@ -555,9 +559,13 @@ ipcMain.handle("get-hardware-monitor", async () => {
       si.graphics(),
       si.cpu(),
     ]);
-    const gpu = graphics.controllers.find(
-      (c) => !c.vendor?.toLowerCase().includes("microsoft")
+    const controllers = graphics.controllers.filter(
+      (c) => !`${c.vendor ?? ""} ${c.model ?? ""}`.toLowerCase().includes("microsoft")
     );
+    const gpu =
+      controllers.find((c) => `${c.vendor ?? ""} ${c.model ?? ""}`.toLowerCase().includes("nvidia")) ??
+      controllers.find((c) => !`${c.vendor ?? ""} ${c.model ?? ""}`.toLowerCase().includes("intel")) ??
+      controllers[0];
     const ramTotalGb = Math.round(mem.total / 1073741824 * 10) / 10;
     const ramUsedGb  = Math.round(mem.used  / 1073741824 * 10) / 10;
     return {
@@ -570,7 +578,7 @@ ipcMain.handle("get-hardware-monitor", async () => {
       ramTotalGb,
       ramUsedGb,
       gpuName:     gpu?.model           || "Inconnu",
-      gpuIsNvidia: gpu?.vendor?.toLowerCase().includes("nvidia") ?? false,
+      gpuIsNvidia: `${gpu?.vendor ?? ""} ${gpu?.model ?? ""}`.toLowerCase().includes("nvidia"),
       cpuName:     cpu.brand,
       cpuIsIntel:  cpu.manufacturer?.toLowerCase().includes("intel") ?? false,
     };
@@ -1003,7 +1011,10 @@ ipcMain.handle("clean-junk", async (_e, targetId: string) => {
 ipcMain.handle("get-driver-info", async () => {
   const script = `
 $ErrorActionPreference = 'SilentlyContinue'
-$gpu = Get-WmiObject Win32_VideoController | Where-Object { $_.Name -notlike '*Microsoft*' } | Select-Object -First 1
+$controllers = Get-WmiObject Win32_VideoController | Where-Object { $_.Name -notlike '*Microsoft*' }
+$gpu = $controllers | Where-Object { $_.Name -match 'NVIDIA' } | Select-Object -First 1
+if (-not $gpu) { $gpu = $controllers | Where-Object { $_.Name -notmatch 'Intel' } | Select-Object -First 1 }
+if (-not $gpu) { $gpu = $controllers | Select-Object -First 1 }
 $gpuName = if ($gpu) { $gpu.Name } else { 'Inconnu' }
 $gpuDriver = if ($gpu) { $gpu.DriverVersion } else { 'N/A' }
 $isNvidia = ($gpuName -match 'NVIDIA')
