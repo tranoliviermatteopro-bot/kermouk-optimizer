@@ -490,19 +490,30 @@ ipcMain.handle("open-external", (_e, url: string) => {
 
 // ─── Helper: run a .ps1 script elevated or not ───────────────────────────────
 async function runPs1(script: string, elevated = false, timeout = 15000): Promise<string> {
-  const ps1Path = join(SCRIPTS_DIR, `ps_${Date.now()}.ps1`);
-  fs.writeFileSync(ps1Path, script, "utf-8");
+  const stamp = Date.now();
+  const ps1Path = join(SCRIPTS_DIR, `ps_${stamp}.ps1`);
+  const outPath = elevated ? join(SCRIPTS_DIR, `ps_out_${stamp}.txt`) : "";
+  // En mode élevé, Start-Process -Verb RunAs ne relaie pas le stdout de l'enfant
+  // (et ne supporte pas -RedirectStandardOutput). On fait donc capturer au script
+  // lui-même toutes ses sorties (Write-Host inclus, via *>&1) vers un fichier temp.
+  const finalScript = elevated
+    ? `$KermOut = '${outPath.replace(/'/g, "''")}'\n& {\n${script}\n} *>&1 | Out-File -LiteralPath $KermOut -Encoding utf8 -Width 4096`
+    : script;
+  fs.writeFileSync(ps1Path, finalScript, "utf-8");
   try {
-    let cmd: string;
     if (elevated) {
-      cmd = `powershell -Command "Start-Process powershell.exe -ArgumentList '-ExecutionPolicy Bypass -File \\"${ps1Path.replace(/\\/g, "\\\\")}\\"' -Verb RunAs -Wait"`;
+      const cmd = `powershell -Command "Start-Process powershell.exe -ArgumentList '-ExecutionPolicy Bypass -File \\"${ps1Path.replace(/\\/g, "\\\\")}\\"' -Verb RunAs -Wait"`;
+      await execAsync(cmd, { timeout });
+      try { return fs.readFileSync(outPath, "utf-8").trim(); }
+      catch { return ""; }
     } else {
-      cmd = `powershell -ExecutionPolicy Bypass -File "${ps1Path}"`;
+      const cmd = `powershell -ExecutionPolicy Bypass -File "${ps1Path}"`;
+      const { stdout } = await execAsync(cmd, { timeout });
+      return stdout.trim();
     }
-    const { stdout } = await execAsync(cmd, { timeout });
-    return stdout.trim();
   } finally {
     if (fs.existsSync(ps1Path)) fs.unlinkSync(ps1Path);
+    if (outPath && fs.existsSync(outPath)) fs.unlinkSync(outPath);
   }
 }
 
@@ -1765,7 +1776,8 @@ if ($props) { $props | ConvertTo-Json -Depth 3 } else { '[]' }
 
   const applyScript = `$ErrorActionPreference = 'SilentlyContinue'\n${setLines}\nWrite-Host 'OK'`;
   try {
-    await runPs1(applyScript, true, 30000);
+    const out = await runPs1(applyScript, true, 30000);
+    if (!out.includes("OK")) return { ok: false, backupPath, error: out || "Application échouée (élévation refusée ?)" };
     return { ok: true, backupPath };
   } catch (e: unknown) {
     return { ok: false, backupPath, error: String(e) };
@@ -1785,7 +1797,8 @@ ipcMain.handle("restore-adapter-preset", async (_e, backupPath: string) => {
       `try { Set-NetAdapterAdvancedProperty -Name "${String(adapterName).replace(/"/g, "")}" -RegistryKeyword "${String(p.RegistryKeyword).replace(/"/g, "")}" -RegistryValue ${JSON.stringify(String(p.RegistryValue))} -ErrorAction SilentlyContinue } catch {}`
     ).join("\n");
     const script = `$ErrorActionPreference = 'SilentlyContinue'\n${setLines}\nWrite-Host 'OK'`;
-    await runPs1(script, true, 30000);
+    const out = await runPs1(script, true, 30000);
+    if (!out.includes("OK")) return { ok: false, error: out || "Restauration échouée (élévation refusée ?)" };
     return { ok: true };
   } catch (e: unknown) {
     return { ok: false, error: String(e) };
@@ -1827,7 +1840,8 @@ ipcMain.handle("delete-qos-policy", async (_e, name: string) => {
   const safeName = name.replace(/"/g, "");
   const script = `Remove-NetQosPolicy -Name "${safeName}" -Confirm:$false -ErrorAction SilentlyContinue; Write-Host 'OK'`;
   try {
-    await runPs1(script, true, 10000);
+    const out = await runPs1(script, true, 10000);
+    if (!out.includes("OK")) return { ok: false, error: out || "Suppression échouée (élévation refusée ?)" };
     return { ok: true };
   } catch (e: unknown) { return { ok: false, error: String(e) }; }
 });
