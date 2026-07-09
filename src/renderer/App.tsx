@@ -81,7 +81,7 @@ declare global {
       getDriverInfo: () => Promise<{ gpu: string; gpuVersion: string; isNvidia: boolean; isAmd: boolean }>;
       applyStreamingMode: () => Promise<{ ok: boolean; error?: string }>;
       setNotificationsEnabled: (enabled: boolean) => Promise<void>;
-      scanGpoStatus: () => Promise<{ gpeditAvailable: boolean; vbsActive: boolean; tweaks: Record<string, string> }>;
+      scanGpoStatus: () => Promise<{ gpeditAvailable: boolean; tweaks: Record<string, string> }>;
       installGpedit: () => Promise<{ ok: boolean; error?: string }>;
       installGpeditDll: () => Promise<{ ok: boolean; error?: string }>;
       applyGpoTweaks: (ids: string[]) => Promise<{ ok: boolean; error?: string }>;

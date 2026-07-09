@@ -424,16 +424,15 @@ ipcMain.handle("apply-tweaks", async (_e, batContent: string, tweakNames: string
     createBackup("Sauvegarde auto", "automatic").catch(() => {});
   }
 
-  const batPath = join(SCRIPTS_DIR, `kermouk_tweaks_${Date.now()}.bat`);
-
   try {
-    fs.writeFileSync(batPath, batContent, "latin1");
-
-    // Execute as admin via PowerShell Start-Process RunAs
-    const cmd = `powershell -Command "Start-Process cmd.exe -ArgumentList '/c \\"${batPath.replace(/\\/g, "\\\\")}\\""' -Verb RunAs -Wait"`;
-
-    await execAsync(cmd, { timeout: 60000 });
-
+    const { ok } = await runElevatedBat(batContent, 60000);
+    if (!ok) {
+      return {
+        ok: false,
+        error: "Le script élevé ne s'est pas terminé",
+        message: "Erreur lors de l'application. Vérifiez que vous avez accepté l'élévation UAC.",
+      };
+    }
     return {
       ok: true,
       applied: tweakNames,
@@ -504,6 +503,23 @@ async function runPs1(script: string, elevated = false, timeout = 15000): Promis
     return stdout.trim();
   } finally {
     if (fs.existsSync(ps1Path)) fs.unlinkSync(ps1Path);
+  }
+}
+
+// Exécute une .bat en élevé et confirme qu'elle est allée jusqu'au bout via un marqueur
+// fichier écrit en dernière ligne (le stdout de l'enfant élevé n'étant pas capturable).
+async function runElevatedBat(batContent: string, timeout = 60000): Promise<{ ok: boolean }> {
+  const stamp = Date.now();
+  const batPath = join(SCRIPTS_DIR, `elev_${stamp}.bat`);
+  const donePath = join(SCRIPTS_DIR, `elev_done_${stamp}.txt`);
+  fs.writeFileSync(batPath, `${batContent}\r\necho DONE> "${donePath}"\r\n`, "latin1");
+  try {
+    const cmd = `powershell -Command "Start-Process cmd.exe -ArgumentList '/c \\"${batPath.replace(/\\/g, "\\\\")}\\""' -Verb RunAs -Wait"`;
+    await execAsync(cmd, { timeout });
+    return { ok: fs.existsSync(donePath) };
+  } finally {
+    if (fs.existsSync(batPath)) fs.unlinkSync(batPath);
+    if (fs.existsSync(donePath)) fs.unlinkSync(donePath);
   }
 }
 
@@ -598,16 +614,12 @@ reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\Syst
 
 echo OK
 `;
-  const batPath = join(SCRIPTS_DIR, `cpu_tweaks_${Date.now()}.bat`);
   try {
-    fs.writeFileSync(batPath, batContent, "latin1");
-    const cmd = `powershell -Command "Start-Process cmd.exe -ArgumentList '/c \\"${batPath.replace(/\\/g, "\\\\")}\\""' -Verb RunAs -Wait"`;
-    await execAsync(cmd, { timeout: 30000 });
+    const { ok } = await runElevatedBat(batContent, 30000);
+    if (!ok) return { ok: false, error: "Le script élevé ne s'est pas terminé (élévation refusée ?)" };
     return { ok: true };
   } catch (e: unknown) {
     return { ok: false, error: String(e) };
-  } finally {
-    if (fs.existsSync(batPath)) fs.unlinkSync(batPath);
   }
 });
 
@@ -731,13 +743,6 @@ function Get-Reg($path, $name) {
   try { return (Get-ItemProperty -LiteralPath "Registry::$path" -Name $name -ErrorAction Stop).$name } catch { return $null }
 }
 
-# VBS status
-$vbs = $false
-try {
-  $dg = Get-CimInstance -ClassName Win32_DeviceGuard -Namespace root/Microsoft/Windows/DeviceGuard -ErrorAction Stop
-  $vbs = ($dg.VirtualizationBasedSecurityStatus -eq 2)
-} catch {}
-
 # Tweak checks
 $bandwidth    = (Get-Reg "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Psched" "NonBestEffortLimit") -eq 0
 $qos          = (Test-Path "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite") -and ((Get-Reg "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite" "DSCP Value") -eq "46")
@@ -745,7 +750,6 @@ $delivOpt     = (Get-Reg "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows
 $powerThrot   = (Get-Reg "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" "PowerThrottlingOff") -eq 1
 $hags         = (Get-Reg "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" "HwSchMode") -eq 2
 $fastStartup  = (Get-Reg "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Power" "HiberbootEnabled") -eq 0
-$vbsDisabled  = (Get-Reg "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\DeviceGuard" "EnableVirtualizationBasedSecurity") -eq 0
 $telemetry    = (Get-Reg "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection" "AllowTelemetry") -eq 0
 $cortana      = ((Get-Reg "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Search" "AllowCortana") -eq 0) -and ((Get-Reg "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Search" "DisableWebSearch") -eq 1) -and ((Get-Reg "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Search" "ConnectedSearchUseWeb") -eq 0)
 $onedrive     = (Get-Reg "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\OneDrive" "DisableFileSyncNGSC") -eq 1
@@ -754,7 +758,6 @@ $appCompat    = (Get-Reg "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows
 
 function s($b) { if ($b) { 'active' } else { 'inactive' } }
 @{
-  vbsActive = [bool]$vbs
   tweaks = @{
     bandwidth    = s $bandwidth
     qos_fortnite = s $qos
@@ -762,7 +765,6 @@ function s($b) { if ($b) { 'active' } else { 'inactive' } }
     power_throttling = s $powerThrot
     hags         = s $hags
     fast_startup = s $fastStartup
-    vbs          = s $vbsDisabled
     telemetry    = s $telemetry
     cortana      = s $cortana
     onedrive     = s $onedrive
@@ -775,7 +777,7 @@ function s($b) { if ($b) { 'active' } else { 'inactive' } }
     const out = await runPs1(script, false, 12000);
     return JSON.parse(out);
   } catch {
-    return { gpeditAvailable: false, vbsActive: false, tweaks: {} };
+    return { gpeditAvailable: false, tweaks: {} };
   }
 });
 
@@ -808,13 +810,6 @@ ipcMain.handle("apply-gpo-tweaks", async (_e, ids: string[]) => {
 
   if (ids.includes("fast_startup"))
     lines.push(`reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f >nul`);
-
-  if (ids.includes("vbs")) {
-    lines.push(
-      `reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul`,
-      `reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 0 /f >nul`,
-    );
-  }
 
   if (ids.includes("telemetry")) {
     lines.push(
@@ -850,20 +845,16 @@ ipcMain.handle("apply-gpo-tweaks", async (_e, ids: string[]) => {
 
   lines.push("echo OK");
   const batContent = lines.join("\r\n");
-  const batPath = join(SCRIPTS_DIR, `gpo_${Date.now()}.bat`);
 
   try {
-    fs.writeFileSync(batPath, batContent, "latin1");
-    const cmd = `powershell -Command "Start-Process cmd.exe -ArgumentList '/c \\"${batPath.replace(/\\/g, "\\\\")}\\""' -Verb RunAs -Wait"`;
-    await execAsync(cmd, { timeout: 60000 });
+    const { ok } = await runElevatedBat(batContent, 60000);
+    if (!ok) return { ok: false, error: "Le script élevé ne s'est pas terminé (élévation refusée ?)" };
     const states = (store.get("tweak_status") as Record<string, boolean>) || {};
     for (const id of ids) states[id] = true;
     store.set("tweak_status", states);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: String(e) };
-  } finally {
-    if (fs.existsSync(batPath)) fs.unlinkSync(batPath);
   }
 });
 
@@ -889,20 +880,16 @@ reg delete "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU" /v 
 reg delete "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU" /v AUOptions /f >nul 2>&1
 echo OK
 `;
-  const batPath = join(SCRIPTS_DIR, `gpo_restore_${Date.now()}.bat`);
   try {
-    fs.writeFileSync(batPath, batContent, "latin1");
-    const cmd = `powershell -Command "Start-Process cmd.exe -ArgumentList '/c \\"${batPath.replace(/\\/g, "\\\\")}\\""' -Verb RunAs -Wait"`;
-    await execAsync(cmd, { timeout: 30000 });
-    const GPO_IDS = ["bandwidth","qos_fortnite","delivery_opt","power_throttling","hags","fast_startup","vbs","telemetry","cortana","onedrive","windows_update","app_compat"];
+    const { ok } = await runElevatedBat(batContent, 30000);
+    if (!ok) return { ok: false, error: "Le script élevé ne s'est pas terminé (élévation refusée ?)" };
+    const GPO_IDS = ["bandwidth","qos_fortnite","delivery_opt","power_throttling","hags","fast_startup","telemetry","cortana","onedrive","windows_update","app_compat"];
     const states = (store.get("tweak_status") as Record<string, boolean>) || {};
     for (const id of GPO_IDS) states[id] = false;
     store.set("tweak_status", states);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: String(e) };
-  } finally {
-    if (fs.existsSync(batPath)) fs.unlinkSync(batPath);
   }
 });
 
@@ -1063,16 +1050,12 @@ reg add "HKCU\\Software\\obs-studio" /v "KermoukStreamOptimized" /t REG_SZ /d "1
 
 echo STREAMING_MODE_OK
 `;
-  const batPath = join(SCRIPTS_DIR, `streaming_${Date.now()}.bat`);
   try {
-    fs.writeFileSync(batPath, batContent, "latin1");
-    const cmd = `powershell -Command "Start-Process cmd.exe -ArgumentList '/c \\"${batPath.replace(/\\/g, "\\\\")}\\""' -Verb RunAs -Wait"`;
-    await execAsync(cmd, { timeout: 30000 });
+    const { ok } = await runElevatedBat(batContent, 30000);
+    if (!ok) return { ok: false, error: "Le script élevé ne s'est pas terminé (élévation refusée ?)" };
     return { ok: true };
   } catch (e) {
     return { ok: false, error: String(e) };
-  } finally {
-    if (fs.existsSync(batPath)) fs.unlinkSync(batPath);
   }
 });
 
@@ -1390,16 +1373,12 @@ reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Manag
 echo PACK_COMPLET_OK
 endlocal
 `;
-  const batPath = join(SCRIPTS_DIR, `pack_complet_${Date.now()}.bat`);
   try {
-    fs.writeFileSync(batPath, bat, "latin1");
-    const cmd = `powershell -Command "Start-Process cmd.exe -ArgumentList '/c \\"${batPath.replace(/\\/g, "\\\\")}\\""' -Verb RunAs -Wait"`;
-    await execAsync(cmd, { timeout: 180000 });
+    const { ok } = await runElevatedBat(bat, 180000);
+    if (!ok) return { ok: false, error: "Le script élevé ne s'est pas terminé (élévation refusée ?)" };
     return { ok: true };
   } catch (e: unknown) {
     return { ok: false, error: String(e) };
-  } finally {
-    if (fs.existsSync(batPath)) fs.unlinkSync(batPath);
   }
 });
 
@@ -1904,16 +1883,12 @@ sc stop RetailDemo >nul 2>&1
 sc config RetailDemo start=disabled >nul 2>&1
 echo BASIC_PRESET_OK
 `;
-  const batPath = join(SCRIPTS_DIR, `svc_preset_${Date.now()}.bat`);
   try {
-    fs.writeFileSync(batPath, batContent, "latin1");
-    const cmd = `powershell -Command "Start-Process cmd.exe -ArgumentList '/c \\"${batPath.replace(/\\/g, "\\\\")}\\""' -Verb RunAs -Wait"`;
-    await execAsync(cmd, { timeout: 60000 });
+    const { ok } = await runElevatedBat(batContent, 60000);
+    if (!ok) return { ok: false, backupId, error: "Le script élevé ne s'est pas terminé (élévation refusée ?)" };
     return { ok: true, backupId };
   } catch (e: unknown) {
     return { ok: false, backupId, error: String(e) };
-  } finally {
-    if (fs.existsSync(batPath)) fs.unlinkSync(batPath);
   }
 });
 

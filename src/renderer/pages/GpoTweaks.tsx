@@ -65,16 +65,6 @@ const TWEAKS_DEF: Omit<GpoTweak, "status">[] = [
     category: "Performance CPU",
   },
   {
-    id: "vbs",
-    label: "Désactiver VBS / Memory Integrity",
-    description: "Virtualization-Based Security et HVCI réduisent les performances gaming de 5 à 15% en isolant le kernel dans une VM.",
-    gain: "+5-15% FPS",
-    category: "Performance CPU",
-    rebootRequired: true,
-    dangerous: true,
-    warning: "Réduit la sécurité kernel — recommandé sur PC gaming dédié uniquement, pas sur un PC pro/travail.",
-  },
-  {
     id: "telemetry",
     label: "Désactiver télémétrie complète",
     description: "Bloque la collecte de données diagnostiques via les politiques AllowTelemetry=0 et MaxTelemetryAllowed=0.",
@@ -124,7 +114,6 @@ export default function GpoTweaks({ isPremium, openLicenseModal }: Props) {
   );
   const [scanning, setScanning] = useState(false);
   const [applying, setApplying] = useState<string | null>(null);
-  const [vbsActive, setVbsActive] = useState<boolean | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set(TWEAKS_DEF.map(t => t.id)));
   const [resultMsg, setResultMsg] = useState("");
 
@@ -150,7 +139,6 @@ export default function GpoTweaks({ isPremium, openLicenseModal }: Props) {
       window.kermouk?.checkTweakStatus?.().catch(() => ({})),
     ]);
     if (scanResult) {
-      setVbsActive(scanResult.vbsActive ?? null);
       const merged = { ...(scanResult.tweaks || {}) };
       for (const [id, active] of Object.entries(realStatus || {})) {
         merged[id] = active ? "active" : merged[id] ?? "inactive";
@@ -223,7 +211,7 @@ export default function GpoTweaks({ isPremium, openLicenseModal }: Props) {
             Fonctionnalité Premium
           </div>
           <div style={{ fontSize: "12px", color: "#333", marginBottom: "20px" }}>
-            Tweaks Group Policy avancés — récupère 20% bande passante, désactive VBS, Power Throttling et plus.
+            Tweaks Group Policy avancés — récupère 20% bande passante, désactive Power Throttling et plus.
           </div>
           <button onClick={openLicenseModal} className="btn-primary" style={{ padding: "10px 24px" }}>
             Activer Premium
@@ -269,21 +257,6 @@ export default function GpoTweaks({ isPremium, openLicenseModal }: Props) {
           {scanning ? "Scan..." : "Rescanner"}
         </button>
       </div>
-
-      {/* VBS warning if active */}
-      {vbsActive && (
-        <div className="card" style={{ marginBottom: "12px", background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.2)" }}>
-          <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-            <span style={{ color: "#ef4444", fontSize: "16px", flexShrink: 0 }}>⚠</span>
-            <div>
-              <div style={{ fontSize: "12px", color: "#ef4444", fontWeight: 700, marginBottom: "3px" }}>VBS / Memory Integrity détecté ACTIF</div>
-              <div style={{ fontSize: "11px", color: "#555" }}>
-                Virtualization-Based Security est activé sur ce PC — il réduit les FPS de 5 à 15%. Désactivez-le via le tweak ci-dessous si c'est un PC gaming dédié.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Reboot warning */}
       {rebootNeeded && (
@@ -368,7 +341,6 @@ export default function GpoTweaks({ isPremium, openLicenseModal }: Props) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
           {[
             { metric: "Bande passante", gain: "+20% récupérée", color: "#3b82f6" },
-            { metric: "FPS (VBS off)", gain: "+5 à +15%", color: "#FF6B00" },
             { metric: "FPS (Power Throttling)", gain: "+10%", color: "#FF6B00" },
             { metric: "Ping réseau", gain: "-15 à -20ms", color: "#22c55e" },
             { metric: "Input lag", gain: "-21%", color: "#22c55e" },

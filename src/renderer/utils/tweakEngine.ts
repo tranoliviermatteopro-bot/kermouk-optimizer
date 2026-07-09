@@ -569,19 +569,6 @@ export const PREMIUM_TWEAKS: Tweak[] = [
       'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\USB" /v DisableSelectiveSuspend /t REG_DWORD /d 1 /f',
     ],
   },
-  // ── SÉCURITÉ — Core Isolation ─────────────────────────────────────────────────
-  {
-    id: "core-isolation-off",
-    name: "Desactivation Core Isolation (Memory Integrity)",
-    description: "Desactive Hypervisor-Protected Code Integrity (HVCI). Libere de la RAM et reduit la charge CPU sur les PC sans VBS hardware requis.",
-    category: "premium",
-    warning: "SECURITE REDUITE — Cette option desactive la protection contre les exploits noyau (Memory Integrity). Risque eleve si vous naviguez sur des sites non fiables ou installez des drivers non signes. Ne jamais activer automatiquement. Desactive par defaut.",
-    commands: [],
-    registryCommands: [
-      'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 0 /f',
-      'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f',
-    ],
-  },
   // ── GPU NVIDIA exclusifs ──────────────────────────────────────────────────────
   {
     id: "nvidia-geforce-update-disable",
@@ -1309,8 +1296,7 @@ export function generateBatScript(tweaks: Tweak[]): string {
     `echo   ${tweaks.length} tweak(s) applique(s) avec succes !`,
     "echo   Redemarrez Windows pour appliquer tous les changements.",
     "echo ============================================",
-    "echo.",
-    "pause"
+    "echo."
   );
 
   return lines.join("\r\n");

@@ -8,7 +8,7 @@ interface Props {
   openLicenseModal: () => void;
 }
 
-type Tab = "gpu" | "cpu" | "ram" | "peripherals" | "storage" | "security";
+type Tab = "gpu" | "cpu" | "ram" | "peripherals" | "storage";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "gpu", label: "GPU" },
@@ -16,7 +16,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "ram", label: "RAM" },
   { id: "peripherals", label: "Peripherals" },
   { id: "storage", label: "Storage" },
-  { id: "security", label: "Securite" },
 ];
 
 // ── CPU ───────────────────────────────────────────────────────────────────────
@@ -30,11 +29,6 @@ const CPU_TWEAKS = [
   PREMIUM_TWEAKS.find(t => t.id === "cpu-max-performance")!,
   PREMIUM_TWEAKS.find(t => t.id === "disable-cstates")!,
   PREMIUM_TWEAKS.find(t => t.id === "disable-modern-standby")!,
-].filter(Boolean);
-
-// ── Sécurité ──────────────────────────────────────────────────────────────────
-const SECURITY_TWEAKS = [
-  PREMIUM_TWEAKS.find(t => t.id === "core-isolation-off")!,
 ].filter(Boolean);
 
 // ── RAM ───────────────────────────────────────────────────────────────────────
@@ -209,16 +203,6 @@ export default function HardwarePage({ isPremium, openLicenseModal }: Props) {
             openLicenseModal={openLicenseModal}
           />
         </div>
-      )}
-
-      {activeTab === "security" && (
-        <TweakSection
-          title="SÉCURITÉ"
-          subtitle="Options avancées — lisez attentivement les avertissements avant d'activer"
-          tweaks={SECURITY_TWEAKS}
-          isPremium={isPremium}
-          openLicenseModal={openLicenseModal}
-        />
       )}
     </div>
   );
