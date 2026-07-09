@@ -397,14 +397,37 @@ ipcMain.handle("get-system-info", async () => {
 
 // ─── IPC: Create restore point ──────────────────────────────────────────────
 ipcMain.handle("create-restore-point", async () => {
+  // Checkpoint-Computer réussit silencieusement (exit 0) même quand Windows ignore la
+  // demande — throttling natif ~1 point/24h, ou Protection du système désactivée (fréquent
+  // sur PC grand public). On compare le nombre de points avant/après pour ne pas annoncer
+  // "créé avec succès" quand ce n'est pas vraiment le cas.
+  const countCmd = `powershell -Command "(Get-ComputerRestorePoint -ErrorAction SilentlyContinue | Measure-Object).Count"`;
+  const readCount = async (): Promise<number> => {
+    try {
+      const { stdout } = await execAsync(countCmd, { timeout: 15000 });
+      const n = parseInt(stdout.trim(), 10);
+      return Number.isFinite(n) ? n : -1;
+    } catch {
+      return -1;
+    }
+  };
+
+  const before = await readCount();
   try {
     await execAsync(
       `powershell -Command "Enable-ComputerRestore -Drive 'C:\\'; Checkpoint-Computer -Description 'KERMOUK OPTIMIZER Backup' -RestorePointType 'MODIFY_SETTINGS'"`,
       { timeout: 30000 }
     );
-    return { ok: true };
+    const after = await readCount();
+    if (before === -1 || after === -1) return { ok: true, created: true };
+    if (after > before) return { ok: true, created: true };
+    return {
+      ok: true,
+      created: false,
+      error: "Aucun nouveau point créé (limite Windows d'~1 point/24h, ou Protection du système désactivée).",
+    };
   } catch (e: unknown) {
-    return { ok: false, error: String(e) };
+    return { ok: false, created: false, error: String(e) };
   }
 });
 
@@ -425,7 +448,7 @@ ipcMain.handle("apply-tweaks", async (_e, batContent: string, tweakNames: string
   }
 
   try {
-    const { ok } = await runElevatedBat(batContent, 60000);
+    const { ok, failCount } = await runElevatedBat(batContent, 60000);
     if (!ok) {
       return {
         ok: false,
@@ -436,7 +459,9 @@ ipcMain.handle("apply-tweaks", async (_e, batContent: string, tweakNames: string
     return {
       ok: true,
       applied: tweakNames,
-      message: `${tweakNames.length} tweak(s) appliqué(s) avec succès.`,
+      message: failCount
+        ? `${tweakNames.length} tweak(s) appliqué(s), ${failCount} commande(s) en échec (déjà à cet état, clé absente ou droits insuffisants).`
+        : `${tweakNames.length} tweak(s) appliqué(s) avec succès.`,
     };
   } catch (e: unknown) {
     return {
@@ -517,17 +542,35 @@ async function runPs1(script: string, elevated = false, timeout = 15000): Promis
   }
 }
 
+// N'autorise que les caractères plausibles pour un nom d'adaptateur / clé-valeur registre / chemin
+// (alnum, espace, . _ - : \ / , ( )). Bloque $ ` " ' ; | & { } etc. pour empêcher toute évasion
+// d'une chaîne PowerShell double-quote (sous-expressions $(...), variables, chaînage de commandes),
+// y compris quand la valeur vient d'un fichier de backup JSON écrit par l'app elle-même.
+function sanitizePsArg(value: unknown): string {
+  return String(value ?? "").replace(/[^\w\s.\-:\\/,()]/g, "");
+}
+
 // Exécute une .bat en élevé et confirme qu'elle est allée jusqu'au bout via un marqueur
 // fichier écrit en dernière ligne (le stdout de l'enfant élevé n'étant pas capturable).
-async function runElevatedBat(batContent: string, timeout = 60000): Promise<{ ok: boolean }> {
+async function runElevatedBat(batContent: string, timeout = 60000): Promise<{ ok: boolean; failCount?: number }> {
   const stamp = Date.now();
   const batPath = join(SCRIPTS_DIR, `elev_${stamp}.bat`);
   const donePath = join(SCRIPTS_DIR, `elev_done_${stamp}.txt`);
-  fs.writeFileSync(batPath, `${batContent}\r\necho DONE> "${donePath}"\r\n`, "latin1");
+  // Le marqueur porte aussi KERM_FAIL (compteur de commandes en échec, alimenté par les
+  // "if errorlevel 1 set /a KERM_FAIL+=1" que generateBatScript insère après chaque commande)
+  // pour ne pas annoncer un succès total quand certains tweaks ont silencieusement échoué.
+  fs.writeFileSync(
+    batPath,
+    `${batContent}\r\nif not defined KERM_FAIL set KERM_FAIL=0\r\necho DONE:%KERM_FAIL%> "${donePath}"\r\n`,
+    "latin1"
+  );
   try {
     const cmd = `powershell -Command "Start-Process cmd.exe -ArgumentList '/c \\"${batPath.replace(/\\/g, "\\\\")}\\""' -Verb RunAs -Wait"`;
     await execAsync(cmd, { timeout });
-    return { ok: fs.existsSync(donePath) };
+    if (!fs.existsSync(donePath)) return { ok: false };
+    const marker = fs.readFileSync(donePath, "utf-8").trim();
+    const match = /^DONE:(\d+)$/.exec(marker);
+    return { ok: true, failCount: match ? parseInt(match[1], 10) : 0 };
   } finally {
     if (fs.existsSync(batPath)) fs.unlinkSync(batPath);
     if (fs.existsSync(donePath)) fs.unlinkSync(donePath);
@@ -600,6 +643,20 @@ ipcMain.handle("get-hardware-monitor", async () => {
 
 // ─── IPC: Apply CPU performance tweaks ──────────────────────────────────────
 ipcMain.handle("apply-cpu-performance-tweaks", async () => {
+  // Modifie registre + BCD : même filet de sécurité que apply-tweaks avant toute application.
+  if (!autoBackupTriggeredThisSession && !hasAutoBackupToday()) {
+    try {
+      await createBackup("Sauvegarde auto", "automatic");
+      autoBackupTriggeredThisSession = true;
+    } catch (e: unknown) {
+      return {
+        ok: false,
+        error: String(e),
+        message: "Sauvegarde de sécurité impossible — application annulée pour préserver la restauration. Réessayez ou créez une sauvegarde manuelle.",
+      };
+    }
+  }
+
   const batContent = `@echo off
 :: 1. Activer Ultimate Performance power plan
 :: Duplique vers un GUID fixe (KERMOUK) : locale-safe, pas de doublons a chaque run
@@ -1047,6 +1104,21 @@ $isAmd = ($gpuName -match 'AMD|Radeon')
 
 // ─── IPC: Apply streaming mode ────────────────────────────────────────────────
 ipcMain.handle("apply-streaming-mode", async () => {
+  // Non branché dans l'UI mais exposé via window.kermouk (preload) : même filet backup
+  // qu'apply-tweaks au cas où il serait invoqué (DevTools, futur câblage UI).
+  if (!autoBackupTriggeredThisSession && !hasAutoBackupToday()) {
+    try {
+      await createBackup("Sauvegarde auto", "automatic");
+      autoBackupTriggeredThisSession = true;
+    } catch (e: unknown) {
+      return {
+        ok: false,
+        error: String(e),
+        message: "Sauvegarde de sécurité impossible — application annulée pour préserver la restauration. Réessayez ou créez une sauvegarde manuelle.",
+      };
+    }
+  }
+
   const batContent = `@echo off
 :: Priorité processus streaming
 wmic process where name="obs64.exe" CALL setpriority "Above Normal" >nul 2>&1
@@ -1279,6 +1351,22 @@ ipcMain.handle("apply-nvidia-profile", async (_e, profileFilename: string, inspe
 
 // ─── IPC: Apply Pack Complet Fortnite ────────────────────────────────────────
 ipcMain.handle("apply-pack-complet", async () => {
+  // Handler le plus invasif du code (services, memoire, mitigations CPU, winsock reset) —
+  // non branché dans l'UI mais exposé via window.kermouk (preload). Même filet backup
+  // qu'apply-tweaks au cas où il serait invoqué (DevTools, futur câblage UI).
+  if (!autoBackupTriggeredThisSession && !hasAutoBackupToday()) {
+    try {
+      await createBackup("Sauvegarde auto", "automatic");
+      autoBackupTriggeredThisSession = true;
+    } catch (e: unknown) {
+      return {
+        ok: false,
+        error: String(e),
+        message: "Sauvegarde de sécurité impossible — application annulée pour préserver la restauration. Réessayez ou créez une sauvegarde manuelle.",
+      };
+    }
+  }
+
   const bat = `@echo off
 setlocal EnableDelayedExpansion
 
@@ -1743,15 +1831,16 @@ ipcMain.handle("apply-adapter-preset", async (_e, adapterName: string, type: "wi
   fs.mkdirSync(dataDir, { recursive: true });
   const backupPath = join(dataDir, `adapter_${type}_${Date.now()}.json`);
 
+  const safeAdapterName = sanitizePsArg(adapterName);
   const backupScript = `
 $ErrorActionPreference = 'SilentlyContinue'
-$props = Get-NetAdapterAdvancedProperty -Name "${adapterName.replace(/"/g, "")}" -ErrorAction SilentlyContinue |
+$props = Get-NetAdapterAdvancedProperty -Name "${safeAdapterName}" -ErrorAction SilentlyContinue |
   Select-Object RegistryKeyword, DisplayValue, RegistryValue, ValidDisplayValues
 if ($props) { $props | ConvertTo-Json -Depth 3 } else { '[]' }
 `;
   let backupData = "[]";
   try { backupData = await runPs1(backupScript, false, 8000); } catch { /* continue */ }
-  fs.writeFileSync(backupPath, JSON.stringify({ adapterName, type, timestamp: Date.now(), rawJson: backupData }), "utf-8");
+  fs.writeFileSync(backupPath, JSON.stringify({ adapterName: safeAdapterName, type, timestamp: Date.now(), rawJson: backupData }), "utf-8");
 
   const props: [string, string][] = [
     ["*UAPSDSupport", "0"],
@@ -1771,7 +1860,7 @@ if ($props) { $props | ConvertTo-Json -Depth 3 } else { '[]' }
   ];
 
   const setLines = props.map(([kw, val]) =>
-    `try { Set-NetAdapterAdvancedProperty -Name "${adapterName.replace(/"/g, "")}" -RegistryKeyword "${kw}" -RegistryValue ${val} -ErrorAction SilentlyContinue } catch {}`
+    `try { Set-NetAdapterAdvancedProperty -Name "${safeAdapterName}" -RegistryKeyword "${kw}" -RegistryValue ${val} -ErrorAction SilentlyContinue } catch {}`
   ).join("\n");
 
   const applyScript = `$ErrorActionPreference = 'SilentlyContinue'\n${setLines}\nWrite-Host 'OK'`;
@@ -1793,8 +1882,9 @@ ipcMain.handle("restore-adapter-preset", async (_e, backupPath: string) => {
     const props: Array<{ RegistryKeyword: string; RegistryValue: string }> = JSON.parse(rawJson || "[]");
     if (!Array.isArray(props) || props.length === 0) return { ok: false, error: "Aucune propriété sauvegardée." };
 
+    const safeAdapterName = sanitizePsArg(adapterName);
     const setLines = props.map(p =>
-      `try { Set-NetAdapterAdvancedProperty -Name "${String(adapterName).replace(/"/g, "")}" -RegistryKeyword "${String(p.RegistryKeyword).replace(/"/g, "")}" -RegistryValue ${JSON.stringify(String(p.RegistryValue))} -ErrorAction SilentlyContinue } catch {}`
+      `try { Set-NetAdapterAdvancedProperty -Name "${safeAdapterName}" -RegistryKeyword "${sanitizePsArg(p.RegistryKeyword)}" -RegistryValue "${sanitizePsArg(p.RegistryValue)}" -ErrorAction SilentlyContinue } catch {}`
     ).join("\n");
     const script = `$ErrorActionPreference = 'SilentlyContinue'\n${setLines}\nWrite-Host 'OK'`;
     const out = await runPs1(script, true, 30000);
@@ -1818,14 +1908,15 @@ else { '[]' }
 });
 
 ipcMain.handle("create-qos-policy", async (_e, name: string, appPath: string, dscpValue: number) => {
-  const safeName = name.replace(/"/g, "");
-  const safeApp = appPath.replace(/"/g, "");
+  const safeName = sanitizePsArg(name);
+  const safeApp = sanitizePsArg(appPath);
+  const safeDscp = Number.isFinite(dscpValue) ? Math.trunc(dscpValue) : 0;
   const script = `
 $ErrorActionPreference = 'Stop'
 try {
   $existing = Get-NetQosPolicy -Name "${safeName}" -ErrorAction SilentlyContinue
   if ($existing) { Remove-NetQosPolicy -Name "${safeName}" -Confirm:$false -ErrorAction SilentlyContinue }
-  New-NetQosPolicy -Name "${safeName}" -AppPathNameMatchCondition "${safeApp}" -IPProtocolMatchCondition Both -DSCPAction ${dscpValue} -NetworkProfile All
+  New-NetQosPolicy -Name "${safeName}" -AppPathNameMatchCondition "${safeApp}" -IPProtocolMatchCondition Both -DSCPAction ${safeDscp} -NetworkProfile All
   Write-Host 'OK'
 } catch { Write-Host "ERR:$_" }
 `;
@@ -1837,7 +1928,7 @@ try {
 });
 
 ipcMain.handle("delete-qos-policy", async (_e, name: string) => {
-  const safeName = name.replace(/"/g, "");
+  const safeName = sanitizePsArg(name);
   const script = `Remove-NetQosPolicy -Name "${safeName}" -Confirm:$false -ErrorAction SilentlyContinue; Write-Host 'OK'`;
   try {
     const out = await runPs1(script, true, 10000);

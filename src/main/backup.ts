@@ -68,6 +68,13 @@ const REGISTRY_KEYS = [
   "HKCU\\Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}",
   "HKCU\\Control Panel\\Desktop",
   "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\SmartActionPlatform\\SmartClipboard",
+  // GPO tab (index.ts apply-gpo-tweaks) — pas couvertes ailleurs, sinon la restauration
+  // générale (BackupsPage) ne les annule pas alors que l'utilisateur croit tout restaurer.
+  "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Psched",
+  "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization",
+  "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppCompat",
+  "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search",
+  "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU",
 ];
 
 // Services managed by the app — track their state on backup

@@ -98,7 +98,10 @@ export default function FortniteAdvanced({ isPremium, openLicenseModal }: Props)
     addModeLog("Mode Gaming — application de tous les tweaks FREE...", "info");
 
     const rpResult = await window.kermouk.createRestorePoint();
-    addModeLog(rpResult.ok ? "✓ Point de restauration créé." : "⚠ Point de restauration ignoré.", rpResult.ok ? "ok" : "warn");
+    addModeLog(
+      rpResult.ok && rpResult.created ? "✓ Point de restauration créé." : `⚠ ${rpResult.error || "Point de restauration ignoré."}`,
+      rpResult.ok && rpResult.created ? "ok" : "warn"
+    );
 
     const bat = generateBatScript(FREE_TWEAKS);
     const result = await window.kermouk.applyTweaks(bat, FREE_TWEAKS.map((t) => t.name));
@@ -123,7 +126,10 @@ export default function FortniteAdvanced({ isPremium, openLicenseModal }: Props)
     addModeLog("Mode Tournoi — application de TOUS les tweaks...", "info");
 
     const rpResult = await window.kermouk.createRestorePoint();
-    addModeLog(rpResult.ok ? "✓ Point de restauration créé." : "⚠ Point de restauration ignoré.", rpResult.ok ? "ok" : "warn");
+    addModeLog(
+      rpResult.ok && rpResult.created ? "✓ Point de restauration créé." : `⚠ ${rpResult.error || "Point de restauration ignoré."}`,
+      rpResult.ok && rpResult.created ? "ok" : "warn"
+    );
 
     const tweaksToApply = ALL_TWEAKS.filter((t) => t.id !== "nvidia-auto-boost");
     const bat = generateBatScript(tweaksToApply);

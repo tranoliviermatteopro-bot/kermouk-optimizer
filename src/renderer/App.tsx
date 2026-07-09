@@ -63,7 +63,7 @@ declare global {
       activateLicense: (key: string) => Promise<{ ok: boolean; message?: string; profile?: SupabaseProfile; alreadyOwned?: boolean }>;
       getSystemInfo: () => Promise<Record<string, string>>;
       applyTweaks: (bat: string, names: string[]) => Promise<{ ok: boolean; applied?: string[]; message?: string; error?: string }>;
-      createRestorePoint: () => Promise<{ ok: boolean; error?: string }>;
+      createRestorePoint: () => Promise<{ ok: boolean; created?: boolean; error?: string }>;
       openExternal: (url: string) => Promise<void>;
       getMotherboardInfo: () => Promise<{ manufacturer: string; product: string }>;
       rebootToBios: () => Promise<{ ok: boolean; error?: string }>;

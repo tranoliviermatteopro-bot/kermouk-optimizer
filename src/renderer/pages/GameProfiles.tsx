@@ -140,6 +140,9 @@ export default function GameProfiles({ isPremium, openLicenseModal }: Props) {
     }
 
     setApplying(profile.id);
+    setStatus(s => ({ ...s, [profile.id]: "Point de restauration..." }));
+    await window.kermouk?.createRestorePoint();
+
     setStatus(s => ({ ...s, [profile.id]: "Application..." }));
 
     const result = await window.kermouk?.applyTweaks(profile.tweaks, [`${profile.name} Profile`]);

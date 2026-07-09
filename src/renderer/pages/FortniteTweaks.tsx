@@ -104,7 +104,10 @@ export default function FortniteTweaks({ isPremium, openLicenseModal }: Props) {
 
     addLog("Création point de restauration Windows...", "info");
     const rp = await window.kermouk.createRestorePoint();
-    addLog(rp.ok ? "✓ Point de restauration créé." : "⚠ Point de restauration ignoré.", rp.ok ? "ok" : "warn");
+    addLog(
+      rp.ok && rp.created ? "✓ Point de restauration créé." : `⚠ ${rp.error || "Point de restauration ignoré."}`,
+      rp.ok && rp.created ? "ok" : "warn"
+    );
 
     const bat = generateBatScript(toApply);
     addLog(`Génération du script BAT (${toApply.length} tweaks Fortnite)...`, "info");

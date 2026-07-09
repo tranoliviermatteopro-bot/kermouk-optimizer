@@ -240,6 +240,7 @@ function BufferbloatSection({ isPremium, openLicenseModal }: Props) {
     const batContent = `@echo off\r\n${commands.join("\r\n")}\r\necho ${tweakId}_OK\r\n`;
 
     try {
+      await window.kermouk.createRestorePoint();
       const result = await window.kermouk.applyTweaks(batContent, [tweakId]);
       setState(result.ok ? "ok" : "error");
       if (!result.ok) setError(result.error || result.message || "Erreur");

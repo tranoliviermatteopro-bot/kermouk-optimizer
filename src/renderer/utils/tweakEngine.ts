@@ -1229,6 +1229,7 @@ function encodePowerShellCommand(cmd: string): string {
 export function generateBatScript(tweaks: Tweak[]): string {
   const lines: string[] = [
     "@echo off",
+    "set KERM_FAIL=0",
     "echo ============================================",
     "echo   KERMOUK OPTIMIZER v2.5.0 - Application Tweaks",
     "echo ============================================",
@@ -1236,30 +1237,38 @@ export function generateBatScript(tweaks: Tweak[]): string {
     "",
   ];
 
+  // Ajoute une vérification d'échec après chaque commande — sans ça, "success" ne
+  // reflétait que la fin du script (le fichier marqueur DONE), pas la réussite
+  // individuelle de chaque tweak (clé absente, droits insuffisants, type déjà différent).
+  const pushChecked = (cmd: string) => {
+    lines.push(cmd);
+    lines.push("if errorlevel 1 set /a KERM_FAIL+=1");
+  };
+
   for (const tweak of tweaks) {
     lines.push(`echo [*] Tweak: ${tweak.id}`);
 
     if (tweak.commands?.length) {
       for (const cmd of tweak.commands) {
-        lines.push(cmd);
+        pushChecked(cmd);
       }
     }
 
     if (tweak.registryCommands?.length) {
       for (const cmd of tweak.registryCommands) {
-        lines.push(cmd);
+        pushChecked(cmd);
       }
     }
 
     if (tweak.serviceCommands?.length) {
       for (const cmd of tweak.serviceCommands) {
-        lines.push(cmd);
+        pushChecked(cmd);
       }
     }
 
     if (tweak.powershellCommands?.length) {
       for (const cmd of tweak.powershellCommands) {
-        lines.push(`powershell -NoProfile -EncodedCommand ${encodePowerShellCommand(cmd)}`);
+        pushChecked(`powershell -NoProfile -EncodedCommand ${encodePowerShellCommand(cmd)}`);
       }
     }
 

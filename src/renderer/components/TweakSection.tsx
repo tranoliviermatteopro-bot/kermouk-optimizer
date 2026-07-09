@@ -68,8 +68,10 @@ export default function TweakSection({ title, subtitle, tweaks, isPremium, openL
     setCreatingRP(true);
     const rp = await window.kermouk.createRestorePoint();
     setCreatingRP(false);
-    if (rp.ok) {
+    if (rp.ok && rp.created) {
       addLog("✓ Point de restauration créé avec succès.", "ok");
+    } else if (rp.ok) {
+      addLog(`⚠ ${rp.error || "Aucun nouveau point de restauration créé."}`, "warn");
     } else {
       addLog("⚠ Point de restauration ignoré (droits insuffisants).", "warn");
     }
