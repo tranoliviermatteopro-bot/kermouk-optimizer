@@ -853,6 +853,22 @@ function s($b) { if ($b) { 'active' } else { 'inactive' } }
 
 // ─── IPC: GPO — apply tweaks ─────────────────────────────────────────────────
 ipcMain.handle("apply-gpo-tweaks", async (_e, ids: string[]) => {
+  // Auto-backup: même filet que apply-tweaks avant de modifier des clés GPO (Psched, QoS,
+  // DeliveryOptimization, WindowsUpdate\AU, Windows Search, AppCompat) — sinon la restauration
+  // générale (BackupsPage) n'a pas de snapshot pré-modif de ces clés.
+  if (!autoBackupTriggeredThisSession && !hasAutoBackupToday()) {
+    try {
+      await createBackup("Sauvegarde auto", "automatic");
+      autoBackupTriggeredThisSession = true;
+    } catch (e: unknown) {
+      return {
+        ok: false,
+        error: String(e),
+        message: "Sauvegarde de sécurité impossible — application annulée pour préserver la restauration. Réessayez ou créez une sauvegarde manuelle.",
+      };
+    }
+  }
+
   const lines: string[] = ["@echo off"];
 
   if (ids.includes("bandwidth"))
@@ -1826,6 +1842,16 @@ foreach ($a in $adapters) {
 
 // ─── IPC: Network — Apply adapter preset ─────────────────────────────────────
 ipcMain.handle("apply-adapter-preset", async (_e, adapterName: string, type: "wifi" | "ethernet") => {
+  // Auto-backup général en plus du backup JSON dédié : les propriétés avancées NIC vivent sous
+  // HKLM\...\Control\Class\{4d36e968-...} (déjà dans REGISTRY_KEYS), mais la restauration générale
+  // n'a de baseline que si un snapshot existe avant la modif.
+  if (!autoBackupTriggeredThisSession && !hasAutoBackupToday()) {
+    try {
+      await createBackup("Sauvegarde auto", "automatic");
+      autoBackupTriggeredThisSession = true;
+    } catch { /* le backup JSON dédié ci-dessous reste le filet minimal */ }
+  }
+
   const dataDir = join(app.getPath("userData"), "AdapterBackups");
   fs.mkdirSync(dataDir, { recursive: true });
   const backupPath = join(dataDir, `adapter_${type}_${Date.now()}.json`);
