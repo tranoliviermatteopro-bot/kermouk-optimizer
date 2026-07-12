@@ -224,48 +224,33 @@ ipcMain.handle("license-activate", async (_e, key: string) => {
       return { ok: false, message: "Connecte-toi à ton compte avant d'activer une licence." };
     }
 
-    const { data: license, error: selectError } = await supabase
-      .from("licenses")
-      .select("key, is_used, used_by")
-      .eq("key", trimmed)
-      .maybeSingle();
+    // Activation 100 % server-side via RPC SECURITY DEFINER : réclame la clé et passe
+    // is_premium côté serveur, pour que is_premium ne soit plus falsifiable via la clé anon.
+    const { data: status, error: rpcError } = await supabase.rpc("activate_license", { p_key: trimmed });
 
-    if (selectError) return { ok: false, message: "Erreur serveur : " + selectError.message };
-    if (!license) return { ok: false, message: "Clé introuvable. Vérifie ta clé." };
+    if (rpcError) return { ok: false, message: "Échec de l'activation : " + rpcError.message };
 
-    // Déjà activée par ce même compte → on réaccepte
-    if (license.is_used && license.used_by === session.user.id) {
-      saveLicense(trimmed);
-      store.set("supabase_premium", true);
-      const { data: profile } = await supabase.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
-      return { ok: true, alreadyOwned: true, profile: profile || null };
+    switch (status) {
+      case "not_found":
+        return { ok: false, message: "Clé introuvable. Vérifie ta clé." };
+      case "used_by_other":
+        return { ok: false, message: "Cette clé a déjà été activée par un autre compte." };
+      case "not_authenticated":
+        return { ok: false, message: "Connecte-toi à ton compte avant d'activer une licence." };
+      case "activated":
+      case "already_owned":
+        break;
+      default:
+        return { ok: false, message: "Réponse d'activation inattendue : " + String(status) };
     }
-
-    if (license.is_used) {
-      return { ok: false, message: "Cette clé a déjà été activée par un autre compte." };
-    }
-
-    // Réclamer la clé (la policy RLS vérifie is_used = false côté Supabase)
-    const { error: claimError } = await supabase
-      .from("licenses")
-      .update({ is_used: true, used_by: session.user.id })
-      .eq("key", trimmed)
-      .eq("is_used", false);
-
-    if (claimError) return { ok: false, message: "Échec de l'activation : " + claimError.message };
-
-    // Passer le profil en premium
-    const { data: profile } = await supabase
-      .from("profiles")
-      .update({ is_premium: true })
-      .eq("id", session.user.id)
-      .select()
-      .single();
 
     saveLicense(trimmed);
     store.set("supabase_premium", true);
 
-    return { ok: true, profile: profile || null };
+    const { data: profile } = await supabase
+      .from("profiles").select("*").eq("id", session.user.id).maybeSingle();
+
+    return { ok: true, alreadyOwned: status === "already_owned", profile: profile || null };
   } catch (e) {
     return { ok: false, message: String(e) };
   }
