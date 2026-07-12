@@ -1,6 +1,6 @@
 {
   "name": "kermouk-optimizer-desktop",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "KERMOUK OPTIMIZER — Gaming Optimizer pour Fortnite",
   "main": "out/main/index.js",
   "scripts": {
@@ -10,9 +10,11 @@
     "dist:win": "electron-vite build && electron-builder --win"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.107.0",
+    "@supabase/supabase-js": "^2.108.2",
     "electron-store": "^8.1.0",
     "electron-updater": "^6.8.3",
+    "next": "^14.2.35",
+    "stripe": "^22.3.0",
     "systeminformation": "^5.22.11",
     "uuid": "^9.0.1",
     "ws": "^8.21.0"
@@ -60,13 +62,10 @@
       "allowElevation": true
     },
     "files": [
-      "out/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "resources/assets",
-        "to": "assets"
-      }
+      "out/**/*",
+      "!node_modules/next/**",
+      "!node_modules/@next/**",
+      "!node_modules/stripe/**"
     ],
     "directories": {
       "output": "dist",
