@@ -643,9 +643,10 @@ ipcMain.handle("apply-cpu-performance-tweaks", async () => {
   }
 
   const batContent = `@echo off
-:: 1. Plan alim : Ultimate Performance sur PC fixe, Equilibre sur laptop (batterie detectee)
-:: Ultimate force le CPU a 100%% min en permanence -> surchauffe + throttle sur portable = delay.
-powershell -NoProfile -Command "if (Get-CimInstance Win32_Battery) { powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e } else { powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 c4d5e6f7-1234-4567-89ab-cdef01234567 | Out-Null; powercfg /setactive c4d5e6f7-1234-4567-89ab-cdef01234567 }" 2>nul
+:: 1. Plan alim : Ultimate sur PC fixe ; sur laptop -> Perf elevees mais min CPU 5%% (batterie detectee).
+:: Ultimate/HighPerf forcent le CPU a 100%% min en permanence -> surchauffe + throttle sur portable = delay.
+:: Le min 5%% laisse le CPU redescendre au repos (froid) tout en gardant 100%% max sous charge (perf en jeu).
+powershell -NoProfile -Command "if (Get-CimInstance Win32_Battery) { powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c b1a2c3d4-5e6f-4a7b-8c9d-000011112222 | Out-Null; powercfg -setacvalueindex b1a2c3d4-5e6f-4a7b-8c9d-000011112222 SUB_PROCESSOR PROCTHROTTLEMIN 5 | Out-Null; powercfg -setdcvalueindex b1a2c3d4-5e6f-4a7b-8c9d-000011112222 SUB_PROCESSOR PROCTHROTTLEMIN 5 | Out-Null; powercfg /setactive b1a2c3d4-5e6f-4a7b-8c9d-000011112222 } else { powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 c4d5e6f7-1234-4567-89ab-cdef01234567 | Out-Null; powercfg /setactive c4d5e6f7-1234-4567-89ab-cdef01234567 }" 2>nul
 if errorlevel 1 powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
 :: 2. Desactiver Core Parking
@@ -1463,8 +1464,8 @@ schtasks /Change /TN "\\Microsoft\\Windows\\WindowsErrorReporting\\QueueReportin
 schtasks /Change /TN "\\Microsoft\\Windows\\XblGameSave\\XblGameSaveTask" /Disable >nul 2>&1
 
 echo [10/10] Plan alimentation et disque SSD...
-:: Ultimate Performance sur PC fixe, Equilibre sur laptop (batterie) pour eviter le throttle thermique.
-powershell -NoProfile -Command "if (Get-CimInstance Win32_Battery) { powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e } else { powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 c4d5e6f7-1234-4567-89ab-cdef01234567 | Out-Null; powercfg /setactive c4d5e6f7-1234-4567-89ab-cdef01234567 }" >nul 2>&1
+:: Ultimate sur PC fixe ; sur laptop -> Perf elevees min CPU 5%% (batterie) pour eviter le throttle thermique.
+powershell -NoProfile -Command "if (Get-CimInstance Win32_Battery) { powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c b1a2c3d4-5e6f-4a7b-8c9d-000011112222 | Out-Null; powercfg -setacvalueindex b1a2c3d4-5e6f-4a7b-8c9d-000011112222 SUB_PROCESSOR PROCTHROTTLEMIN 5 | Out-Null; powercfg -setdcvalueindex b1a2c3d4-5e6f-4a7b-8c9d-000011112222 SUB_PROCESSOR PROCTHROTTLEMIN 5 | Out-Null; powercfg /setactive b1a2c3d4-5e6f-4a7b-8c9d-000011112222 } else { powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 c4d5e6f7-1234-4567-89ab-cdef01234567 | Out-Null; powercfg /setactive c4d5e6f7-1234-4567-89ab-cdef01234567 }" >nul 2>&1
 if errorlevel 1 powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
 powercfg /change standby-timeout-ac 0 >nul 2>&1
 fsutil behavior set disableDeleteNotify 0 >nul 2>&1
