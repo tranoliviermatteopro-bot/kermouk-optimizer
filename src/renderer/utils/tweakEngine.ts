@@ -9,6 +9,12 @@ export interface Tweak {
   serviceCommands?: string[];
   warning?: string;
   win11Only?: boolean;
+  /**
+   * Tweak à risque : soit thermiquement dangereux sur laptop (i5-10300H / GTX 1650 Ti),
+   * soit potentiellement contre-productif (peut AUGMENTER la latence/stutter au lieu de la réduire).
+   * Ces tweaks sont EXCLUS de "Tout sélectionner" et du "Mode Tournoi" — activation manuelle et consciente uniquement.
+   */
+  risky?: boolean;
 }
 
 export const FREE_TWEAKS: Tweak[] = [
@@ -97,6 +103,7 @@ export const PREMIUM_TWEAKS: Tweak[] = [
   // ── RÉSEAU ──────────────────────────────────────────────────────────────────
   {
     id: "tcp-autotune",
+    risky: true,
     name: "TCP AutoTuning Désactivé",
     description: "Désactive l'autotuning TCP pour une latence plus stable.",
     category: "premium",
@@ -160,6 +167,7 @@ export const PREMIUM_TWEAKS: Tweak[] = [
   },
   {
     id: "mtu-gaming",
+    risky: true,
     name: "MTU Optimisé Gaming (1472)",
     description: "Configure le MTU optimal pour Fortnite afin d'éviter la fragmentation des paquets réseau.",
     category: "premium",
@@ -366,6 +374,7 @@ export const PREMIUM_TWEAKS: Tweak[] = [
   },
   {
     id: "disable-power-throttling",
+    risky: true,
     name: "Desactivation PowerThrottling",
     description: "Desactive le throttling CPU de Windows (PowerThrottlingOff=1) pour que le processeur maintienne sa frequence maximale en jeu.",
     category: "premium",
@@ -422,6 +431,7 @@ export const PREMIUM_TWEAKS: Tweak[] = [
   },
   {
     id: "core-parking-disable",
+    risky: true,
     name: "Desactivation Core Parking",
     description: "Empeche Windows d'eteindre des coeurs CPU en jeu (Wake Up Cores). Reduit les pics de latence sur i5-10300H.",
     category: "premium",
@@ -512,6 +522,7 @@ export const PREMIUM_TWEAKS: Tweak[] = [
   // ── GPU — DisablePreemption ───────────────────────────────────────────────────
   {
     id: "gpu-disable-preemption",
+    risky: true,
     name: "Desactivation Preemption GPU (Scheduler)",
     description: "Desactive la preemption du scheduler GPU (EnablePreemption=0) pour eviter les interruptions en plein rendu et reduire les micro-stutters.",
     category: "premium",
@@ -573,6 +584,7 @@ export const PREMIUM_TWEAKS: Tweak[] = [
   },
   {
     id: "nvidia-uvm-disable",
+    risky: true,
     name: "Désactiver NVIDIA UVM (Unified Virtual Memory)",
     description: "Tente de désactiver le composant Unified Virtual Memory du driver NVIDIA (utilisé par CUDA). Sur GTX/RTX grand public, l'UVM est intégré au driver — l'effet est généralement nul sans danger.",
     category: "premium",
@@ -595,6 +607,7 @@ export const PREMIUM_TWEAKS: Tweak[] = [
   },
   {
     id: "nvidia-idle-threshold",
+    risky: true,
     name: "Optimiser Seuils d'Inactivité GPU NVIDIA",
     description: "Configure PowerMizer NVIDIA pour maintenir les moteurs GPU actifs plus longtemps avant de réduire les fréquences — réduit les micro-stutters lors des transitions entre scènes.",
     category: "premium",
@@ -607,6 +620,7 @@ export const PREMIUM_TWEAKS: Tweak[] = [
   // ── CPU (nouveaux) ────────────────────────────────────────────────────────────
   {
     id: "disable-cstates",
+    risky: true,
     name: "Désactiver C-States CPU (états basse conso)",
     description: "Empêche le CPU d'entrer dans les états d'économie d'énergie C1/C2/C3 — maintient tous les coeurs en état actif C0 permanent pour une latence d'input minimale.",
     category: "premium",
@@ -629,6 +643,7 @@ export const PREMIUM_TWEAKS: Tweak[] = [
   },
   {
     id: "cpu-max-performance",
+    risky: true,
     name: "État Processeur Min/Max à 100% + Perf Max",
     description: "Force le CPU à 100% de fréquence minimum et maximum (PROCTHROTTLEMIN/MAX=100%) et configure la préférence d'énergie sur Performance maximale — aucune réduction de fréquence en jeu.",
     category: "premium",

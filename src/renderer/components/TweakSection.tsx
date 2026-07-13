@@ -40,7 +40,8 @@ export default function TweakSection({ title, subtitle, tweaks, isPremium, openL
   };
 
   const selectAll = () => {
-    const available = tweaks.filter((t) => t.category === "free" || isPremium).map((t) => t.id);
+    // Exclut les tweaks "risky" (thermique laptop / contre-productifs) — ils exigent une activation manuelle.
+    const available = tweaks.filter((t) => (t.category === "free" || isPremium) && !t.risky).map((t) => t.id);
     setSelected(new Set(available));
     setBulkTweakStates(available, true);
   };
@@ -163,6 +164,11 @@ export default function TweakSection({ title, subtitle, tweaks, isPremium, openL
                     <span className={`badge ${tweak.category === "free" ? "badge-free" : "badge-premium"}`}>
                       {tweak.category === "free" ? "GRATUIT" : "PREMIUM"}
                     </span>
+                    {tweak.risky && (
+                      <span title="Exclu de « Tout sélectionner » et du Mode Tournoi — risque thermique (laptop) ou contre-productif" style={{ fontSize: "9px", color: "#ef4444", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "3px", padding: "1px 6px", fontFamily: "Rajdhani, sans-serif", fontWeight: 700, letterSpacing: "0.04em" }}>
+                        ⚠ À RISQUE
+                      </span>
+                    )}
                     {locked && (
                       <span className="badge badge-locked">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: "inline" }}>

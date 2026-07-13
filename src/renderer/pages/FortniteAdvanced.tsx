@@ -123,7 +123,7 @@ export default function FortniteAdvanced({ isPremium, openLicenseModal }: Props)
     if (modeStatus === "applying") return;
     setModeStatus("applying");
     setModeLogs([]);
-    addModeLog("Mode Tournoi — application de TOUS les tweaks...", "info");
+    addModeLog("Mode Tournoi — application des tweaks sûrs...", "info");
 
     const rpResult = await window.kermouk.createRestorePoint();
     addModeLog(
@@ -131,7 +131,10 @@ export default function FortniteAdvanced({ isPremium, openLicenseModal }: Props)
       rpResult.ok && rpResult.created ? "ok" : "warn"
     );
 
-    const tweaksToApply = ALL_TWEAKS.filter((t) => t.id !== "nvidia-auto-boost");
+    // Exclut nvidia-auto-boost + les tweaks "risky" (thermique laptop / contre-productifs comme
+    // autotuning=disabled ou MTU 1472) : appliqués en masse ils causaient du delay/stutter au lieu d'en enlever.
+    const tweaksToApply = ALL_TWEAKS.filter((t) => t.id !== "nvidia-auto-boost" && !t.risky);
+    addModeLog(`ℹ ${ALL_TWEAKS.filter((t) => t.risky).length} tweak(s) à risque exclus (à activer manuellement si besoin).`, "info");
     const bat = generateBatScript(tweaksToApply);
     const result = await window.kermouk.applyTweaks(bat, tweaksToApply.map((t) => t.name));
 

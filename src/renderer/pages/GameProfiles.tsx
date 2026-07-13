@@ -12,6 +12,8 @@ interface GameProfile {
   description: string;
   paths: string[];
   tweaks: string;
+  /** Commandes annulant `tweaks` — appliquées quand l'utilisateur désactive le profil. */
+  revert: string;
   launchOptions?: string;
   detected?: boolean;
 }
@@ -28,6 +30,12 @@ reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\Syst
 reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games" /v "Priority" /t REG_DWORD /d 6 /f >nul
 reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul
 echo OK`,
+    // Restaure les valeurs par défaut Windows du profil MMCSS "Games" (ces valeurs SONT les défauts).
+    revert: `@echo off
+reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul
+reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games" /v "Priority" /t REG_DWORD /d 6 /f >nul
+reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul
+echo OK`,
   },
   {
     id: "warzone",
@@ -39,6 +47,11 @@ echo OK`,
 powershell -NoProfile -Command "Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name TcpAckFrequency -Value 1 -Type DWord -ErrorAction SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name TCPNoDelay -Value 1 -Type DWord -ErrorAction SilentlyContinue }" >nul
 reg add "HKCU\\Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\Shell\\MuiCache" /v "COD_Boost" /t REG_SZ /d "1" /f >nul
 echo OK`,
+    // Réactive Nagle (supprime TcpAckFrequency/TCPNoDelay) + retire la clé MuiCache posée par le profil.
+    revert: `@echo off
+powershell -NoProfile -Command "Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces' | ForEach-Object { Remove-ItemProperty -Path $_.PSPath -Name TcpAckFrequency -ErrorAction SilentlyContinue; Remove-ItemProperty -Path $_.PSPath -Name TCPNoDelay -ErrorAction SilentlyContinue }" >nul
+reg delete "HKCU\\Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\Shell\\MuiCache" /v "COD_Boost" /f >nul 2>&1
+echo OK`,
   },
   {
     id: "apex",
@@ -48,6 +61,10 @@ echo OK`,
     paths: ["C:\\Program Files (x86)\\Origin Games\\Apex", "C:\\Program Files\\EA Games\\Apex Legends"],
     tweaks: `@echo off
 powershell -NoProfile -Command "Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name TcpAckFrequency -Value 1 -Type DWord -ErrorAction SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name TCPNoDelay -Value 1 -Type DWord -ErrorAction SilentlyContinue }" >nul
+echo OK`,
+    // Réactive Nagle (supprime TcpAckFrequency/TCPNoDelay sur toutes les interfaces).
+    revert: `@echo off
+powershell -NoProfile -Command "Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces' | ForEach-Object { Remove-ItemProperty -Path $_.PSPath -Name TcpAckFrequency -ErrorAction SilentlyContinue; Remove-ItemProperty -Path $_.PSPath -Name TCPNoDelay -ErrorAction SilentlyContinue }" >nul
 echo OK`,
     launchOptions: "+fps_max 0 -novid -high -preload",
   },
@@ -60,6 +77,10 @@ echo OK`,
     tweaks: `@echo off
 reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul
 echo OK`,
+    // GPU Priority=8 est déjà la valeur par défaut Windows — le revert la réaffirme.
+    revert: `@echo off
+reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul
+echo OK`,
   },
   {
     id: "cs2",
@@ -70,6 +91,10 @@ echo OK`,
     tweaks: `@echo off
 powershell -NoProfile -Command "Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces' | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name TcpAckFrequency -Value 1 -Type DWord -ErrorAction SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name TCPNoDelay -Value 1 -Type DWord -ErrorAction SilentlyContinue }" >nul
 echo OK`,
+    // Réactive Nagle (supprime TcpAckFrequency/TCPNoDelay sur toutes les interfaces).
+    revert: `@echo off
+powershell -NoProfile -Command "Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces' | ForEach-Object { Remove-ItemProperty -Path $_.PSPath -Name TcpAckFrequency -ErrorAction SilentlyContinue; Remove-ItemProperty -Path $_.PSPath -Name TCPNoDelay -ErrorAction SilentlyContinue }" >nul
+echo OK`,
     launchOptions: "-novid -high -nojoy +fps_max 0 -tickrate 128",
   },
   {
@@ -79,6 +104,10 @@ echo OK`,
     description: "Arguments JVM optimaux, garbage collector G1GC, allocation RAM",
     paths: ["%APPDATA%\\.minecraft", "C:\\Users\\*\\AppData\\Roaming\\.minecraft"],
     tweaks: `@echo off
+reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games" /v "Priority" /t REG_DWORD /d 6 /f >nul
+echo OK`,
+    // Priority=6 est déjà la valeur par défaut Windows — le revert la réaffirme.
+    revert: `@echo off
 reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games" /v "Priority" /t REG_DWORD /d 6 /f >nul
 echo OK`,
     launchOptions: "-Xms2G -Xmx6G -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions",
@@ -132,10 +161,19 @@ export default function GameProfiles({ isPremium, openLicenseModal }: Props) {
   const toggleProfile = async (profile: GameProfile) => {
     const isActive = active[profile.id];
     if (isActive) {
+      // Désactivation = annuler réellement les tweaks appliqués (pas juste basculer un flag).
+      setApplying(profile.id);
+      setStatus(s => ({ ...s, [profile.id]: "Restauration..." }));
+      const revertResult = await window.kermouk?.applyTweaks(profile.revert, [`${profile.name} Profile (revert)`]);
+      setApplying(null);
+      if (!revertResult?.ok) {
+        setStatus(s => ({ ...s, [profile.id]: "Erreur revert — acceptez UAC" }));
+        return;
+      }
       const next = { ...active, [profile.id]: false };
       setActive(next);
       localStorage.setItem("kermouk_game_profiles", JSON.stringify(next));
-      setStatus(s => ({ ...s, [profile.id]: "Désactivé" }));
+      setStatus(s => ({ ...s, [profile.id]: "Restauré ✓" }));
       return;
     }
 
