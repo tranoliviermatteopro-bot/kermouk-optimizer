@@ -643,10 +643,9 @@ ipcMain.handle("apply-cpu-performance-tweaks", async () => {
   }
 
   const batContent = `@echo off
-:: 1. Activer Ultimate Performance power plan
-:: Duplique vers un GUID fixe (KERMOUK) : locale-safe, pas de doublons a chaque run
-powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 c4d5e6f7-1234-4567-89ab-cdef01234567 >nul 2>&1
-powercfg /setactive c4d5e6f7-1234-4567-89ab-cdef01234567
+:: 1. Plan alim : Ultimate Performance sur PC fixe, Equilibre sur laptop (batterie detectee)
+:: Ultimate force le CPU a 100%% min en permanence -> surchauffe + throttle sur portable = delay.
+powershell -NoProfile -Command "if (Get-CimInstance Win32_Battery) { powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e } else { powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 c4d5e6f7-1234-4567-89ab-cdef01234567 | Out-Null; powercfg /setactive c4d5e6f7-1234-4567-89ab-cdef01234567 }" 2>nul
 if errorlevel 1 powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
 :: 2. Desactiver Core Parking
@@ -1464,8 +1463,8 @@ schtasks /Change /TN "\\Microsoft\\Windows\\WindowsErrorReporting\\QueueReportin
 schtasks /Change /TN "\\Microsoft\\Windows\\XblGameSave\\XblGameSaveTask" /Disable >nul 2>&1
 
 echo [10/10] Plan alimentation et disque SSD...
-powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 c4d5e6f7-1234-4567-89ab-cdef01234567 >nul 2>&1
-powercfg /setactive c4d5e6f7-1234-4567-89ab-cdef01234567 >nul 2>&1
+:: Ultimate Performance sur PC fixe, Equilibre sur laptop (batterie) pour eviter le throttle thermique.
+powershell -NoProfile -Command "if (Get-CimInstance Win32_Battery) { powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e } else { powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 c4d5e6f7-1234-4567-89ab-cdef01234567 | Out-Null; powercfg /setactive c4d5e6f7-1234-4567-89ab-cdef01234567 }" >nul 2>&1
 if errorlevel 1 powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
 powercfg /change standby-timeout-ac 0 >nul 2>&1
 fsutil behavior set disableDeleteNotify 0 >nul 2>&1
